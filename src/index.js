@@ -15,12 +15,15 @@ var game = new Phaser.Game(config);
 
 function preload ()
 {
-    this.load.image('logo', 'assets/logo.png');
+    //this.load.image('logo', 'assets/logo.png');
+
+    this.load.image('mapTiles', 'assets/spritesheets/toweDefense_tilesheet@2.png');
+    this.load.tilemap('level1', 'assets/maps/level1.json', null, Phaser.Tilemap.TILED_JSON);
 }
 
 function create ()
 {
-    var logo = this.add.image(400, 150, 'logo');
+    /*var logo = this.add.image(400, 150, 'logo');
 
     this.tweens.add({
         targets: logo,
@@ -29,6 +32,14 @@ function create ()
         ease: 'Power2',
         yoyo: true,
         loop: -1
-    });
+    });*/
+
+
+    this.level1 = this.game.add.tilemap('level1'); // step 1
+    this.level1.addTilesetImage('tiles', 'mapTiles'); // step 2
+  
+    // step 3
+    this.bgLayer = this.level1.createLayer('background');
+    this.wallsLayer = this.level1.createLayer('rocks');
 
 }
