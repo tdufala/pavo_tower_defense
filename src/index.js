@@ -17,8 +17,8 @@ function preload ()
 {
     //this.load.image('logo', 'assets/logo.png');
 
-    this.load.image('mapTiles', 'assets/spritesheets/toweDefense_tilesheet@2.png');
-    this.load.tilemap('level1', 'assets/maps/level1.json', null, Phaser.Tilemap.TILED_JSON);
+    this.load.image('tiles', 'assets/spritesheets/towerDefense_tilesheet.png');
+    this.load.tilemapTiledJSON('map', 'assets/maps/level1.json');
 }
 
 function create ()
@@ -34,12 +34,14 @@ function create ()
         loop: -1
     });*/
 
+    var map = this.make.tilemap( { key: 'map' });
 
-    this.level1 = this.game.add.tilemap('level1'); // step 1
-    this.level1.addTilesetImage('tiles', 'mapTiles'); // step 2
-  
-    // step 3
-    this.bgLayer = this.level1.createLayer('background');
-    this.wallsLayer = this.level1.createLayer('rocks');
+    // The first parameter is the name of the tileset in Tiled and the second parameter is the key
+    // of the tileset image used when loading the file in preload.
+    var tiles = map.addTilesetImage('tileset', 'tiles');
 
+    // You can load a layer from the map using the layer name from Tiled, or by using the layer
+    // index (0 in this case).
+    var layer = map.createStaticLayer(background, tiles, 0, 0);
+   
 }
