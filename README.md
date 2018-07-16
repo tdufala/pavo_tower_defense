@@ -6,7 +6,7 @@ Phaser 3 Project Template copied from [photonstorm/phaser3-project-template](htt
 ### Requirements
 
 We need [Node.js](https://nodejs.org) to install and run scripts.
-Will be run on flip2.engr.oregonstate.edu server (port 6113) by default; need OSU VPN to view this.
+Will be hosted locally (port 6245) by default, via `webpack-dev-server`.
 
 ## Install and run
 
@@ -16,5 +16,5 @@ Run next commands in your terminal:
 |---------|-------------|
 | `vim `[`package.json`](package.json) | Modify --port for your environment. Default is `6245` |
 | `npm install` | Install dependencies. |
-| `npm start` | Serves up content in background via `forever` and `webpack-dev-server` <br> `forever list` to monitor running process and see logs. |
+| `npm start` | Serves up content in background via `forever` <br> `forever list` to monitor running process and see logs. |
 | `npm stop`  | Kills all `webpack-dev-server` processes running under `forever` |
