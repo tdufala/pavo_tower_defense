@@ -17,6 +17,5 @@ Run next commands in your terminal:
 | `vim `[`webpack.config.js`](webpack.config.js) | Modify port for your environment. |
 | `npm install` | Install dependencies. |
 | `npm start`  | Serves up content via **webpack-dev-server** <br> Press `Ctrl + c` to kill **http-server** process. |
-| `npm stop`  | See `npm run stop_forever` |
-| `npm run forever_start` | Serves up content in background via **forever** <br> `forever list` to monitor running process and see logs. |
-| `npm run forever_stop`  | Kills all **webpack-dev-server** processes running under **forever** |
+| `npm stop`  | Stops **webpack** processes running in the background via **forever**. |
+| `npm run start_dev` | Runs `webpack --watch` and serves content, all in the background via **forever**. <br> Use `./node_modules/forever/bin/forever list` to see log files <br> Use `tail -f <logfile>` in a separate tab to monitor logs. |

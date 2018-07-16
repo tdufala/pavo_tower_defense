@@ -8,7 +8,7 @@
     "build_watch": "webpack --watch",
     "prestart": "npm run build",
     "start": "webpack-dev-server",
-    "start_dev": "forever start -c \"npm run build_watch\" && forever start -c \"npm run start\"",
+    "start_dev": "forever start -c \"npm run build_watch\" ./ && forever start -c \"npm run start\" ./",
     "stop": "npm run stop_forever_server && npm run stop_build_watch",
     "stop_forever_server": "for i in $(forever list | grep \"npm run start\" | cut -c24-27); do forever stop $i; done",
     "stop_build_watch": "for i in $(forever list | grep \"npm run build_watch\" | cut -c24-27); do forever stop $i; done"
