@@ -14,6 +14,7 @@ Run next commands in your terminal:
 
 | Command | Description |
 |---------|-------------|
-| `vim `[`package.json`](package.json) | Modify --host and --port for your environment. Default is `flip2.engr.oregonstate.edu:6113` |
-| `npm install` | Install dependencies and launch browser with examples.|
-| `npm start` | Launch browser to show the examples. <br> Press `Ctrl + c` to kill **http-server** process. |
+| `vim `[`package.json`](package.json) | Modify --port for your environment. Default is `6245` |
+| `npm install` | Install dependencies. |
+| `npm start` | Serves up content in background via `forever` and `webpack-dev-server` <br> `forever list` to monitor running process and see logs. |
+| `npm stop`  | Kills all `webpack-dev-server` processes running under `forever` |
