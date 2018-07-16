@@ -1,7 +1,7 @@
 body {
 	margin: 0 auto;
-	overflow: hidden;
-	background-color: black;
+	overflow: auto;
+	background-color: white;
 }
 		
 canvas {

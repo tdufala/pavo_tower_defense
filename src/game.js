@@ -17,16 +17,14 @@ var game = new Phaser.Game(config);
 
 //updated to facilitate separating different scenes corresponding to different levels/menu in different files
 
-level1Scene.preload = function ()
-{
+level1Scene.preload = function (){
 
     this.load.image('gameTiles', 'assets/spritesheets/towerDefense_tilesheet.png');
     this.load.tilemapTiledJSON('level1', 'assets/maps/level1.json');
 
 }
 
-level1Scene.create = function ()
-{
+level1Scene.create = function (){
  
     this.map = this.add.tilemap('level1');
     var tiles = this.map.addTilesetImage('tileset', 'gameTiles');
@@ -36,6 +34,5 @@ level1Scene.create = function ()
 	
 }
 
-level1Scene.update = function (){
-	
-}
+
+
