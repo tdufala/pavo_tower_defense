@@ -5,11 +5,13 @@
   "main": "src/index.js",
   "scripts": {
     "build": "webpack",
+    "build_watch": "webpack --watch",
     "prestart": "npm run build",
     "start": "webpack-dev-server",
-    "stop": "npm run stop_forever",
-    "start_forever": "npm run prestart && forever start -c \"npm run start\" ./",
-    "stop_forever": "for i in $(forever list | grep \"npm start\" | cut -c24-27); do forever stop $i; done"
+    "start_dev": "forever start -c \"npm run build_watch\" && forever start -c \"npm run start\"",
+    "stop": "npm run stop_forever_server && npm run stop_build_watch",
+    "stop_forever_server": "for i in $(forever list | grep \"npm run start\" | cut -c24-27); do forever stop $i; done",
+    "stop_build_watch": "for i in $(forever list | grep \"npm run build_watch\" | cut -c24-27); do forever stop $i; done"
   },
   "repository": {
     "type": "git",
