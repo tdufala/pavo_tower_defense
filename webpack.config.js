@@ -8,7 +8,7 @@ module.exports = {
     entry: './src/index.js',
 
     devServer: {
-        port: 9231,
+        port: 6245,
         host: '0.0.0.0',
         hot: true,
         disableHostCheck: true,

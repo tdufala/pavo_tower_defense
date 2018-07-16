@@ -6,8 +6,10 @@
   "scripts": {
     "build": "webpack",
     "prestart": "npm run build",
-    "start": "forever start -c \"webpack-dev-server --port=6245\" ./",
-    "stop": "for i in $(forever list | grep \"webpack-dev-server\" | cut -c24-27); do forever stop $i; done"
+    "start": "webpack-dev-server",
+    "stop": "npm run stop_forever",
+    "start_forever": "npm run prestart && forever start -c \"npm run start\" ./",
+    "stop_forever": "for i in $(forever list | grep \"npm start\" | cut -c24-27); do forever stop $i; done"
   },
   "repository": {
     "type": "git",
