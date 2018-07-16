@@ -7,6 +7,13 @@ module.exports = {
 
     entry: './src/index.js',
 
+    devServer: {
+        port: 9231,
+        host: '0.0.0.0',
+        hot: true,
+        disableHostCheck: true,
+    },
+
     output: {
         path: path.resolve(__dirname, 'build'),
         publicPath: '/build/',

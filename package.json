@@ -1,27 +1,32 @@
 {
-  "name": "phaser3-project-template",
-  "version": "1.0.9",
-  "description": "A Phaser 3 Project Template",
+  "name": "pavo-tower-defense",
+  "version": "1.0.0",
+  "description": "Tower Defense game, for senior capstone at Oregon State University",
   "main": "src/index.js",
   "scripts": {
     "build": "webpack",
-    "start": "npm run build && webpack-dev-server --port=6245 --host flip2.engr.oregonstate.edu"
+    "prestart": "npm run build",
+    "start": "forever start -c \"webpack-dev-server --port=6245\" ./",
+    "stop": "for i in $(forever list | grep \"webpack-dev-server\" | cut -c24-27); do forever stop $i; done"
   },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/photonstorm/phaser3-project-template.git"
+    "url": "git+https://github.com/Zekei/pavo-tower-defense.git"
   },
-  "author": "Richard Davey <rdavey@gmail.com> (http://www.photonstorm.com)",
+  "contributors": [{ "name": "Tim Dufala", "email": "dufalat@oregonstate.edu" },
+                   { "name": "Brad Beise", "email": "beiseb@oregonstate.edu" },
+                   { "name": "Jigar Gor", "email": "gorj@oregonstate.edu" }],
   "license": "MIT",
   "licenseUrl": "http://www.opensource.org/licenses/mit-license.php",
   "bugs": {
-    "url": "https://github.com/photonstorm/phaser3-project-template/issues"
+    "url": "https://github.com/Zekei/pavo-tower-defense/issues"
   },
-  "homepage": "https://github.com/photonstorm/phaser3-project-template#readme",
+  "homepage": "https://github.com/Zekei/pavo-tower-defense#readme",
   "devDependencies": {
     "webpack-dev-server": "^2.11.0",
     "webpack": "^3.4.1",
-    "raw-loader": "^0.5.1"
+    "raw-loader": "^0.5.1",
+    "forever": "^0.15.3"
   },
   "dependencies": {
     "phaser": "^3.3.0"
