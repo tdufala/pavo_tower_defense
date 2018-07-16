@@ -1,0 +1,13 @@
+body {
+	margin: 0 auto;
+	overflow: hidden;
+	background-color: black;
+}
+		
+canvas {
+	height: 100%;
+}
+		
+#phaser-app {
+	margin: 0 auto;
+}

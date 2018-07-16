@@ -5,7 +5,7 @@ const path = require('path');
 
 module.exports = {
 
-    entry: './src/index.js',
+    entry: ['./src/game.js', './src/stylesheets/main.css'],
 
     output: {
         path: path.resolve(__dirname, 'build'),
@@ -15,6 +15,10 @@ module.exports = {
 
     module: {
         rules: [
+		  {
+			test: /\.css$/,
+			use: ['css-loader']
+		  },
           {
             test: [ /\.vert$/, /\.frag$/ ],
             use: 'raw-loader'
