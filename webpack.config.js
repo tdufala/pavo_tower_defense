@@ -5,7 +5,10 @@ const path = require('path');
 
 module.exports = {
 
-    entry: ['./src/game.js', './src/stylesheets/main.css'],
+    entry: [
+        './src/game.js',
+        './src/stylesheets/main.css
+    ],
 
     devServer: {
         port: 6245,
@@ -23,7 +26,10 @@ module.exports = {
         rules: [
 		  {
 			test: /\.css$/,
-			use: ['style-loader', 'css-loader']
+			use: [
+                'style-loader',
+                'css-loader'
+            ]
 		  },
           {
             test: [ /\.vert$/, /\.frag$/ ],
