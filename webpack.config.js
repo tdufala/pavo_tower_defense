@@ -7,6 +7,12 @@ module.exports = {
 
     entry: ['./src/game.js', './src/stylesheets/main.css'],
 
+    devServer: {
+        port: 6245,
+        host: '0.0.0.0',
+        disableHostCheck: true,
+    },
+
     output: {
         path: path.resolve(__dirname, 'build'),
         publicPath: '/build/',
