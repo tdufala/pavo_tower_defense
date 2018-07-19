@@ -2,7 +2,7 @@
   "name": "pavo-tower-defense",
   "version": "1.0.0",
   "description": "Tower Defense game, for senior capstone at Oregon State University",
-  "main": "src/index.js",
+  "main": "src/game.js",
   "scripts": {
     "build": "webpack",
     "build_watch": "webpack --watch",
@@ -28,9 +28,11 @@
   },
   "homepage": "https://github.com/Zekei/pavo-tower-defense#readme",
   "devDependencies": {
-    "webpack-dev-server": "^2.11.0",
     "webpack": "^3.12.0",
+    "css-loader": "^1.0.0",
     "raw-loader": "^0.5.1",
+    "webpack-dev-server": "^2.11.0",
+	"style-loader": "^0.21.0",
     "forever": "^0.15.3"
   },
   "dependencies": {
