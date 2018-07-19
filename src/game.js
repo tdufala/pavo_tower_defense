@@ -1,21 +1,35 @@
+/* Pavo Tower Defense (name tbd). Made with Phaser http://phaser.io */
 // ======== Imports ========
+'use strict';
 import 'phaser';
 import css from './stylesheets/main.css'
 
 
 // ======== Globals ========
-
+var game;
 var scenes = [];
 var config = {
     type: Phaser.AUTO,
     parent: 'phaser-app',
+    backgroundColor: '#F0F0F0',
     width: 1344,
-    height: 896,
+    height: 1096,
     pixelArt: true, // antialias: false, roundPixels: true
     scene: scenes
 };
 
-// ======== Scenes ========
+
+// Code to set up game on initial load
+function windowOnLoad() {
+    // Add Scenes
+    scenes.push(StartMenuScene); // first scene pushed first
+    scenes.push(Level1Scene);
+    // Run the game
+    game = new Phaser.Game(config);
+}
+
+// ======== Scene classes ========
+
 
 // Start Menu (first scene)
 var StartMenuScene = new Phaser.Class({
@@ -30,11 +44,13 @@ var StartMenuScene = new Phaser.Class({
     },
 
     create: function() {
-        this.add.text(75, 170, 'Start Menu', { fontSize: '100px', color:'#0000FF' });
+        var startMenuText = this.add.text(75, 75, 'Start Menu', { fontSize: '100px', color:'#0000FF'});
+        var level1Text = this.add.text(75, 200, 'Level 1', { fontSize: '50px', color:'#00FF00' });
         
         // Start Button
-        var btnStart = this.add.sprite(790, 160, 'blueButton').setInteractive();
-        btnStart.setDisplaySize(32,32);
+        var btnStart = this.add.sprite(this.sys.canvas.width - 125, 225, 'blueButton').setInteractive();
+        btnStart.setDisplaySize(100,100);
+        // following could be useful later:
         //btnStart.on('pointerover', function (event) { btnStart.setTexture('imgButtonStartHover');/* Do something when the mouse enters */ });
         //btnStart.on('pointerout', function (event) { btnStart.setTexture('imgButtonStartNormal');/* Do something when the mouse exits. */ });
         btnStart.on('pointerdown', function(event) {
@@ -65,21 +81,16 @@ var Level1Scene = new Phaser.Class({
         this.backgroundLayer = this.map.createStaticLayer('background', tiles);
         this.rockLayer = this.map.createStaticLayer('rocks', tiles);
 
+        var startMenuText = this.add.text(this.sys.canvas.width - 300, this.sys.canvas.height - 100, 'Return to Menu', { fontSize: '50px', color:'#00FF00', rtl: true});
+
         // Back to start menu button
-        var btnStart = this.add.sprite(790, 160, 'blueButton').setInteractive();
-        btnStart.setDisplaySize(32,32);
-        //btnStart.on('pointerover', function (event) { btnStart.setTexture('imgButtonStartHover');/* Do something when the mouse enters */ });
-        //btnStart.on('pointerout', function (event) { btnStart.setTexture('imgButtonStartNormal');/* Do something when the mouse exits. */ });
+        var btnStart = this.add.sprite(this.sys.canvas.width - 100, this.sys.canvas.height - 100, 'blueButton').setInteractive();
+        btnStart.setDisplaySize(100,100);
         btnStart.on('pointerdown', function(event) {
             this.scene.start('startMenu');
         }, this); // Return to the start menu.
     }
 });
 
-// ======== Game start ========
-
-// Add Scenes
-scenes.push(StartMenuScene); // first scene pushed first
-scenes.push(Level1Scene);
-// Finally, start the game.
-var game = new Phaser.Game(config);
+// ======== Global Event Listeners ========
+window.addEventListener('load', windowOnLoad(), false);
