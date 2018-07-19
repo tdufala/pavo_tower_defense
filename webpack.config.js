@@ -7,7 +7,7 @@ module.exports = {
 
     entry: [
         './src/game.js',
-        './src/stylesheets/main.css
+        './src/stylesheets/main.css'
     ],
 
     devServer: {
