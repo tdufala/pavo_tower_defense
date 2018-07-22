@@ -17,13 +17,7 @@ var config = {
     pixelArt: true, // antialias: false, roundPixels: true
     scene: scenes
 };
-//constants used in this game level and/or game
-MAP_WIDTH = 1344;
-GROUND_ENEMY_START = {'x': -50, 'y': 100};
-GROUND_ENEMY_STOP = {'x': MAP_WIDTH + 50, 'y': 900/*ish*/};
 
-AIR_ENEMY_START = {'x' : -50, 'y': -50};
-AIR_ENEMY_STOP = {'x': 1390, 'y': 900/*ish*/};
 
 // Code to set up game on initial load
 function windowOnLoad() {
@@ -45,6 +39,7 @@ var StartMenuScene = new Phaser.Class({
 
     initialize: function StartMenuScene() {
         Phaser.Scene.call(this, { key: 'startMenu'});
+
     },
 
     preload: function() {
@@ -96,9 +91,16 @@ var Level1Scene = new Phaser.Class({
 		//load game map
         this.load.image('gameTiles', 'assets/spritesheets/towerDefense_tilesheet.png');
         this.load.tilemapTiledJSON('level1', 'assets/maps/level1.json');
+				//constants used in this game level and/or game
+		this.map_width = 1344;
+		this.ground_enemy_start = {'x': -50, 'y': 576};
+		this.ground_enemy_stop = {'x': this.map_width + 50, 'y': 288};
+
+		this.air_enemy_start = {'x' : -50, 'y': -50};
+		this.air_enemy_stop = {'x': 1390, 'y': 900/*ish*/};
+
 		
-		//load enemy sprites
-		this.load.image('enemy_sprite', 'assets/sprites/enemy_sprite.png');
+		this.load.spritesheet('enemy_sprite', 'assets/spritesheets/towerDefense_tilesheet.png', { frameWidth: 64, frameHeight: 64} );
     },
 
     create: function() {
@@ -129,30 +131,41 @@ var Level1Scene = new Phaser.Class({
 		
 		//Wave motionpath workflow
 		//set path as lines
-	var line1 = new Phaser.Curves.Line([ 100, 100, 500, 100 ]);
- 
-	path.add(line1);
+				//this.load.image('enemy_sprite', 32, 576, 'sprites', 245);
+		//this.add.sprite(32, 576, 'enemy_sprite', 245);
+	this.graphics = this.add.graphics();
+		
+ 	var line1 = new Phaser.Curves.Line([ this.ground_enemy_start.x, this.ground_enemy_start.y, 288, 576 ]);
+	this.path = new Phaser.Curves.Path();
+	this.path.add(line1);
+	this.path.lineTo(288, 160);
+	this.path.lineTo(672, 160);
+	this.path.lineTo(672, 768);
+	this.path.lineTo(1088, 768);
+	this.path.lineTo(1088, 288);
+	this.path.lineTo(this.ground_enemy_stop.x, this.ground_enemy_stop.y);
+	/*
 	//then add points to go to
     path.lineTo(500, 400);
 
     //  Create the path followers
 
-	//create a follower group
-    followers = this.add.group();
+	//create a follower group*/
+    this.followers = this.add.group();
 
-    for (var i = 0; i < 32; i++)
+    for (var i = 0; i < 10; i++)
     {
 		//creates a game object - read documentation for how to create object attributes : https://photonstorm.github.io/phaser3-docs/Phaser.GameObjects.Group.html#create__anchor
 		//Once array of enemies containing wave data is created above, use this to iterate through for loop setting sprite data and starting position
 		//if certain type create of type i.e. enemy-sprite
-        var enemy_sprite = followers.create(GROUND_ENEMY_START,GROUND_ENEMY_START, 'enemy_sprite');
+        var enemy_sprite = this.followers.create(this.ground_enemy_start.x,this.ground_enemy_start.y, 'enemy_sprite', 245);
 		//else do something with air units
 		
 		
 		//game object functions: https://photonstorm.github.io/phaser3-docs/Phaser.GameObjects.GameObject.html#setData__anchor
-        enemy_sprite.setData({'vector', new Phaser.Math.Vector2(), 'hp': 100, 'type': 'someobject defining motion', 'setmoredatahere': 0});
+        enemy_sprite.setData('vector', new Phaser.Math.Vector2());//, 'hp': 100, 'type': 'someobject defining motion', 'setmoredatahere': 0});
 	
-
+		var velocity = 100 //pixels/sec
 		
 		//define animation
         this.tweens.add({
@@ -161,38 +174,40 @@ var Level1Scene = new Phaser.Class({
             z: 1,
             ease: 'Linear',
 			//duration is in ms, determine based on velocity in pixels/sec over mapsize
-            duration: Math.floor(MAP_WIDTH/enemy_sprite.getData('type').velocity),
+           // duration: Math.floor(MAP_WIDTH/enemy_sprite.getData('velocity')) * 1000,
+		   duration: (Math.floor(this.map_width/velocity) * 500 * Math.random()),
             repeat: 0,
-            delay: 100*i,
+            delay: 200*i
         });
-    }
-},
+	}
+	
+}
+,
 	update: function(){
 		
-    graphics.clear();
+		this.graphics.clear();
 
-    graphics.lineStyle(0, 0, 0);
+		this.graphics.lineStyle(0, 0, 0);
 
-    path.draw(graphics);
+		this.path.draw(this.graphics);
 
-    var balls = followers.getChildren();
+		var enemies = this.followers.getChildren();
 
-    for (var i = 0; i < balls.length; i++)
-    {
-		//depending on type of enemy follow path or go straight to ending position for air units
-        var t = balls[i].z;
-        var vec = balls[i].getData('vector');
+		for (var i = 0; i < enemies.length; i++){
+				//depending on type of enemy follow path or go straight to ending position for air units
+				var t = enemies[i].z;
+				var vec = enemies[i].getData('vector');
 
-        //  The vector is updated in-place
-        path.getPoint(t, vec);
-        
-        balls[i].setPosition(vec.x, vec.y);
+				//  The vector is updated in-place
+				this.path.getPoint(t, vec);
+				
+				enemies[i].setPosition(vec.x, vec.y);
 
-        balls[i].setDepth(balls[i].y);
-    }
-	}
-);
+				enemies[i].setDepth(enemies[i].y);
+			}
+	} 
 
+});
 
 
 
