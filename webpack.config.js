@@ -6,8 +6,10 @@ const path = require('path');
 module.exports = {
 
     entry: [
-        './src/game.js',
-        './src/stylesheets/main.css'
+        path.resolve(__dirname, 'src/game.js'),
+        path.resolve(__dirname, 'src/tower.js'),
+        path.resolve(__dirname, 'src/enemy.js'),
+        path.resolve(__dirname, 'src/stylesheets/main.css')
     ],
 
     devServer: {
