@@ -225,8 +225,6 @@ var Level1Scene = class extends LevelScene {
 };
 
 
-
-
 // Level 2
 var Level2Scene = class extends LevelScene {
     constructor() {
@@ -255,6 +253,19 @@ var Level3Scene = class extends LevelScene {
     create() {
         super.create();
     }
+};
+
+// ======== Towers ======== 
+
+class Tower extends Phaser.GameObjects.Sprite {
+    constructor() {super();}
+    // TODO: Fill in the blanks...
+};
+
+// ======== Enemy Units ======== 
+class Enemy extends Phaser.GameObjects.Sprite {
+    constructor() {super();}
+    // TODO: Fill in the blanks...
 };
 
 // ======== Global Event Listeners ========
