@@ -30,6 +30,29 @@ function windowOnLoad() {
     game = new Phaser.Game(config);
 }
 
+// ======== Towers ========
+
+class Tower extends Phaser.GameObjects.Sprite {
+    constructor(scene) {
+        super(this, scene, 0, 0, 'blueCircle');
+    }
+    // TODO: Fill in the blanks...
+
+};
+
+// ======== Enemy Units ========
+class Enemy extends Phaser.GameObjects.Sprite {
+    update(scene) {
+        // TODO: Fix this function
+        var t = this.z;
+        var vec = this.getData('vector');
+        scene.path.getPoint(t, vec);
+        this.setPosition(vec.x, vec.y);
+        this.setDepth(this.y);
+    }
+    // TODO: Fill in the blanks...
+};
+
 // ======== Scene classes ========
 
 
@@ -41,6 +64,9 @@ var StartMenuScene = class extends Phaser.Scene {
 
     preload() {
         this.load.image('blueButton', 'assets/images/blue_button09.png');
+        this.load.image('blueCircle', 'assets/images/blue_circle.png');
+        this.load.image('greenCircle', 'assets/images/green_circle.png');
+        
     }
 
     create() {
@@ -81,6 +107,8 @@ class LevelScene extends Phaser.Scene {
 		this.map_width = 1344;
         this.map_height = 896;
         this.tileSize = { 'x': 32, 'y': 32 };
+        this.waveFile = 'src/waves/' + this.levelName + '.json';
+        this.enemyWaves = null;
 
 		this.ground_enemy_start = { 'x': 0, 'y': 0 };
 		this.ground_enemy_stop  = { 'x': 0, 'y': 0 };
@@ -93,7 +121,8 @@ class LevelScene extends Phaser.Scene {
         this.load.image('blueButton', 'assets/images/blue_button09.png');
         this.load.image('gameTiles', 'assets/spritesheets/towerDefense_tilesheet.png');
 		this.load.spritesheet('enemy_sprite', 'assets/spritesheets/towerDefense_tilesheet.png', { frameWidth: 64, frameHeight: 64} );
-        this.load.tilemapTiledJSON(this.levelName, 'assets/maps/' + this.levelName + '.json');
+        this.load.tilemapTiledJSON(this.levelName, 'src/maps/' + this.levelName + '.json');
+        // this.load.json('waveFile' + this.levelName, this.waveFile);
     }
 
     create() {
@@ -122,31 +151,12 @@ class LevelScene extends Phaser.Scene {
 	    this.path.add(this.line1);
 
 	    // ---- Units ----
-        this.followers = this.add.group();
+        this.enemyWaves = new EnemyWaves(this);
     }
 
 	update() {
-		
-		this.graphics.clear();
+		this.enemyWaves.update();
 
-		this.graphics.lineStyle(0, 0, 0);
-
-		this.path.draw(this.graphics);
-
-		var enemies = this.followers.getChildren();
-
-		for (var i = 0; i < enemies.length; i++) {
-		    //depending on type of enemy follow path or go straight to ending position for air units
-		    var t = enemies[i].z;
-		    var vec = enemies[i].getData('vector');
-
-		    //  The vector is updated in-place
-		    this.path.getPoint(t, vec);
-		    
-		    enemies[i].setPosition(vec.x, vec.y);
-
-		    enemies[i].setDepth(enemies[i].y);
-		}
 	} 
 
 };
@@ -195,35 +205,8 @@ var Level1Scene = class extends LevelScene {
 
 
 
-        for (var i = 0; i < 10; i++) {
-	    	//creates a game object - read documentation for how to create object attributes : https://photonstorm.github.io/phaser3-docs/Phaser.GameObjects.Group.html#create__anchor
-	    	//Once array of enemies containing wave data is created above, use this to iterate through for loop setting sprite data and starting position
-	    	//if certain type create of type i.e. enemy-sprite
-            var enemy_sprite = this.followers.create(this.ground_enemy_start.x,this.ground_enemy_start.y, 'enemy_sprite', 245);
-	    	//else do something with air units
-	    	
-	    	
-	    	//game object functions: https://photonstorm.github.io/phaser3-docs/Phaser.GameObjects.GameObject.html#setData__anchor
-            enemy_sprite.setData('vector', new Phaser.Math.Vector2());//, 'hp': 100, 'type': 'someobject defining motion', 'setmoredatahere': 0});
-	    
-	    	var velocity = 100 //pixels/sec
-	    	
-	    	//define animation
-            this.tweens.add({
-	    	//can use conditional in update to change path if unit is flying
-                targets: enemy_sprite,
-                z: 1,
-                ease: 'Linear',
-	    		//duration is in ms, determine based on velocity in pixels/sec over mapsize
-               // duration: Math.floor(MAP_WIDTH/enemy_sprite.getData('velocity')) * 1000,
-	    	   duration: (Math.floor(this.map_width/velocity) * 500 * Math.random()),
-                repeat: 0,
-                delay: 200*i
-            });
-	    }
     }
 };
-
 
 // Level 2
 var Level2Scene = class extends LevelScene {
@@ -255,17 +238,128 @@ var Level3Scene = class extends LevelScene {
     }
 };
 
-// ======== Towers ========
 
-class Tower extends Phaser.GameObjects.Sprite {
-    constructor() {super();}
-    // TODO: Fill in the blanks...
+class EnemyWaves {
+    constructor(scene) {
+        this.scene = scene;
+        this.waves = []
+        // The scene provides a JSON waveFile we use to generate waves
+        var waveFileJSON = this.scene.cache.json.get('waveFile' + this.scene.waveFile);
+        // TODO: Uncomment once this is working
+        // this.generateWaves(waveFileJSON);
+        this.testGenerateWaves(1, 10);
+    }
+
+    generateWaves(waveFileJSON) { // TODO: IMPLEMENT
+        // { waves: [ // Each element in waves is a single wave
+        //     [ // Each element of a wave is a list containing an assortment of enemies to be spawned for that wave
+        //          { // Enemies - spawns one or more enemies of the same type at a given delay
+        //              enemyType: 'normalEnemy', // This loads another JSON file containing details for this enemy
+        //              enemyProps: {
+        //                  // include properties here that override those set in the JSON file for the enemy
+        //                  // You could leave off 'enemyType' and just include the contents of that file here, and it should function the same.
+        //              }
+        //              enemyCount: // The number of the specified enemies to spawn. Defaults to 1
+        //              spawnDelay: // A number (or perhaps an object? to be implemented) that gives the delay on when this enemy will spawn. Defaults to 0
+        //              spawnSpread: // Used for enemyCount > 1: Spawns enemies every spawnSpread (unit of time), until all enemies are spawned
+        //          }, {
+        //              // ... more enemies, as above
+        //          }
+        //      ]
+        //   ]
+        //   numEnemies: Number }
+        for (var i = 0; i < waveFileJSON.waves.length; ++i) {
+            // Create a group for our wave
+            this.waves.push(this.scene.add.group());
+            currentWave = waveFileJSON.waves[i];
+            for (var j = 0; j < currentWave.length; ++j) {
+                // TODO: handle enemyType property
+                // TODO: handle enemyProps property
+                // TODO: handle enemyCount property
+                // TODO: handle spawnDelay property
+                // TODO: handle spawnSpread property
+                // TODO: generate enemies, put them into the wave
+            }
+        }
+        
+    }
+    // Copied from previous iteration of code.
+    // Can be used to test generating waves of enemies for basic purposes.
+    // Should use generateWaves with a .json file for more control over what enemies spawn, when, etc.
+    testGenerateWaves(numWaves, enemiesPerWave) { 
+        for (var i = 0; i < numWaves; i++) {
+            // Each wave is a group
+            this.waves.push(this.scene.add.group());
+            for (var j = 0; j < enemiesPerWave; j++) {
+	        	//creates a game object - read documentation for how to create object attributes : https://photonstorm.github.io/phaser3-docs/Phaser.GameObjects.Group.html#create__anchor
+	        	//Once array of enemies containing wave data is created above, use this to iterate through for loop setting sprite data and starting position
+	        	//if certain type create of type i.e. enemy-sprite
+	        	
+                var enemy = new Enemy(this.scene, this.scene.ground_enemy_start.x, this.scene.ground_enemy_start.y, 'greenCircle');
+                this.waves[i].add(enemy);
+	        	//else do something with air units
+	        	
+	        	
+	        	//game object functions: https://photonstorm.github.io/phaser3-docs/Phaser.GameObjects.GameObject.html#setData__anchor
+                enemy.setData('vector', new Phaser.Math.Vector2());//, 'hp': 100, 'type': 'someobject defining motion', 'setmoredatahere': 0});
+	        
+	        	var velocity = 100; //pixels/sec
+	        	
+	        	//define animation
+                this.scene.tweens.add({
+	        	//can use conditional in update to change path if unit is flying
+                    targets: enemy,
+                    z: 1,
+                    ease: 'Linear',
+	        		//duration is in ms, determine based on velocity in pixels/sec over mapsize
+                   // duration: Math.floor(MAP_WIDTH/enemy.getData('velocity')) * 1000,
+                    duration: (Math.floor(this.scene.map_width/velocity) * 500 * Math.random()),
+                    repeat: 0,
+                    delay: 200*j
+                });
+            }
+        }
+        
+    }
+
+    update() {
+        // This currently calls update() on every single enemy. Could be changed to just update the current wave.
+		this.scene.graphics.clear();
+
+		this.scene.graphics.lineStyle(0, 0, 0);
+
+		this.scene.path.draw(this.scene.graphics);
+        for (var i = 0; i < this.waves.length; ++i) {
+            var enemies = this.waves[i].getChildren();
+            for (var j = 0; j < enemies.length; ++j) {
+                //console.log(enemies[j]);
+                enemies[j].setVisible(true);
+                enemies[j].update(this.scene);
+            }
+        }
+    }
 };
 
-// ======== Enemy Units ========
-class Enemy extends Phaser.GameObjects.Sprite {
-    constructor() {super();}
-    // TODO: Fill in the blanks...
+// ========= Player class ========
+// Contains information regarding the player, possibly cross-session
+class Player {
+    constructor(name) {
+        // Lets us pass in a player name later if we wanted to create a leaderboard for instance
+        if(name)
+            this.playerName = name;
+        else
+            this.playerName = "Player 1";
+        // Game resources for the player
+        this.lives = -1;
+        this.gold = -1;
+        // Tower arrangement - could just reference
+        this.towers = null;
+        // String representing the level the player is on - can be used for save states?
+        this.levelID = null;
+        // Wave number - can be used for save states?
+        this.waveNum = 0;
+    }
+    
 };
 
 // ======== Global Event Listeners ========

@@ -1,0 +1,4 @@
+{
+    // TODO: Add properties that define an enemy
+    name: 'normalEnemy'
+}
