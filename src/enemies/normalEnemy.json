@@ -1,4 +1,7 @@
 {
-    // TODO: Add properties that define an enemy
-    name: 'normalEnemy'
+    "name": "normalEnemy",
+	"type": "ground",
+	"hp": 100,
+	"skills": {}	
+	"speed": 100
 }

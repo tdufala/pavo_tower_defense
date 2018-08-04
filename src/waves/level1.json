@@ -16,6 +16,12 @@
 //      ]
 //   ]
 //   numEnemies: Number }
+// 
+// enemyProps refers to extra properties not loaded by the enemy
+// spawnDelay - amount of milliseconds after which to send enemy
+// spawnSpread - group number to send with each delay (given a delay). Must be an integer (if enemyCount cannot be broken into an
+// even number of groups, last group will have fewer enemies of the type)
+
 { "waves": [
         [ // Wave 1 -  1x normalEnemy, 1x scaryEnemy in this wave
             {
@@ -50,7 +56,7 @@
                     // Empty by default
                 },
                 "enemyCount": 1 // Spawn a single enemy - this is default
-                "spawnDelay": 0 // Spawns immediately - this is default
+                "spawnDelay": 30 // Spawns immediately - this is default
                 "spawnSpread": 0 // All enemies spawn at the same time - this is default
             }
         ]
