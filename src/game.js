@@ -42,12 +42,41 @@ class Tower extends Phaser.GameObjects.Sprite {
         super(scene, x, y, key);
 		this.scene = scene;
 		this.type = key;
+		this.isDraggable = false;
+		this.setActive();
     }
 	loadTower(){
 		//load from preloaded json file (must be loaded in scene previously due to async nature of call)
 		//loads BASE specs of tower, does not depend on upgrade
-		this.specs = this.scene.cache.get(this.type);
+		this.specs = this.scene.cache.json.get(this.type);
+
 	}
+	
+	update(){
+		
+ 		if (this.scene.gold >= this.specs.cost){
+			if (!this.isDraggable){
+				this.setVisible(true);
+				this.setDepth(1000);
+				this.setInteractive();
+				this.scene.input.setDraggable(this);
+				this.isDraggable = true;
+				this.scene.input.on('drag', function (pointer, gameObject, dragX, dragY) {
+
+					gameObject.x = dragX;
+					gameObject.y = dragY;
+					console.log(dragX + ',' + dragY);
+				});
+			}
+		} else {
+			if (this.isDraggable){
+				this.scene.input.setDraggable(this, false);
+				this.scene.input.disableInteractive();
+				this.isDraggable = true;
+			}
+		} 
+	}
+
 
 };
 
@@ -229,13 +258,9 @@ class LevelScene extends Phaser.Scene {
 		this.towers = this.add.group();
 		
 		this.map.findObject('towerProps', function(obj){
-			     var tower = new Tower(this, obj.x, obj.y, 'basicTower');
+			     var tower = new Tower(this, obj.x, obj.y, obj.name);
+				 tower.loadTower();
 				 this.towers.add(tower);
-				tower.setInteractive();
-				tower.on('pointerdown', function(pointer){
-					console.log('testing powerdown works');
-				})
-				 console.log(tower);
 			}, this); 
 		
 		
@@ -264,6 +289,13 @@ class LevelScene extends Phaser.Scene {
     }
 
 	update() {
+		
+		var towers = this.towers.getChildren();
+		for (var i = 0; i < towers.length; i++){
+			towers[i].update();
+		}
+		
+		
 		this.enemyWaves.update();
 		
 		//game is lost - go to new scene
@@ -294,6 +326,8 @@ class LevelScene extends Phaser.Scene {
 		if (this.lives == 0){
 			this.scene.start('gameOver');
 		}
+		
+
 
 	} 
 
