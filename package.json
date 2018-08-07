@@ -18,9 +18,20 @@
     "type": "git",
     "url": "git+https://github.com/Zekei/pavo-tower-defense.git"
   },
-  "contributors": [{ "name": "Tim Dufala", "email": "dufalat@oregonstate.edu" },
-                   { "name": "Brad Beise", "email": "beiseb@oregonstate.edu" },
-                   { "name": "Jigar Gor", "email": "gorj@oregonstate.edu" }],
+  "contributors": [
+    {
+      "name": "Tim Dufala",
+      "email": "dufalat@oregonstate.edu"
+    },
+    {
+      "name": "Brad Beise",
+      "email": "beiseb@oregonstate.edu"
+    },
+    {
+      "name": "Jigar Gor",
+      "email": "gorj@oregonstate.edu"
+    }
+  ],
   "license": "MIT",
   "licenseUrl": "http://www.opensource.org/licenses/mit-license.php",
   "bugs": {
@@ -32,7 +43,7 @@
     "css-loader": "^1.0.0",
     "raw-loader": "^0.5.1",
     "webpack-dev-server": "^2.11.0",
-	"style-loader": "^0.21.0",
+    "style-loader": "^0.21.0",
     "forever": "^0.15.3"
   },
   "dependencies": {

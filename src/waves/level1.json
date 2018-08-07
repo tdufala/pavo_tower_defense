@@ -1,57 +1,35 @@
-// TODO: Complete design
-// { waves: [ // Each element in waves is a single wave
-//     [ // Each element of a wave is a list containing an assortment of enemies to be spawned for that wave
-//          { // Enemies - spawns one or more enemies of the same type at a given delay
-//              "enemyType": 'normalEnemy', // This loads another JSON file containing details for this enemy
-//              "enemyProps": {
-//                  // include properties here that override those set in the JSON file for the enemy
-//                  // You could leave off '"enemyType"' and just include the contents of that file here, and it should function the same.
-//              }
-//              "enemyCount": // The number of the specified enemies to spawn. Defaults to 1
-//              "spawnDelay": // A number (or perhaps an object? to be implemented) that gives the delay on when this enemy will spawn. Defaults to 0
-//              "spawnSpread": // Used for "enemyCount" > 1: Spawns enemies every "spawnSpread" (unit of time), until all enemies are spawned
-//          }, {
-//              // ... more enemies, as above
-//          }
-//      ]
-//   ]
-//   numEnemies: Number }
-{ "waves": [
-        [ // Wave 1 -  1x normalEnemy, 1x scaryEnemy in this wave
-            {
-                "enemyType": 'normalEnemy',
-                "enemyProps": {
-                    // Empty by default
-                },
-                "enemyCount": 1 // Spawn a single enemy - this is default
-                "spawnDelay": 0 // Spawns immediately - this is default
-                "spawnSpread": 0 // All enemies spawn at the same time - this is default
+{ "waves":[
+ [
+            {	
+				"enemyType": "normalEnemy",
+				"enemyProps": {},
+                "enemyCount": 1,
+                "spawnDelay": 0,
+                "spawnSpread": 0
             }, {
-                "enemyType": 'scaryEnemy',
+                "enemyType": "scaryEnemy",
                 "enemyProps": {
-                    // Empty by default
                 },
-                "enemyCount": 1 // Spawn a single enemy - this is default
-                "spawnDelay": 0 // Spawns immediately - this is default
-                "spawnSpread": 0 // All enemies spawn at the same time - this is default
+                "enemyCount": 1, 
+                "spawnDelay": 0, 
+                "spawnSpread": 0 
             }
-        ], [ // Wave 2 - 10x normalEnemy, 1x scaryEnemy in this wave
+        ], [ 
             {
-                "enemyType": 'normalEnemy',
+                "enemyType": "normalEnemy",
                 "enemyProps": {
-                    // Empty by default
                 },
-                "enemyCount": 10 // Spawn a single enemy - this is default
-                "spawnDelay": 0 // Spawns immediately - this is default
-                "spawnSpread": 0 // All enemies spawn at the same time - this is default
+                "enemyCount": 10,
+                "spawnDelay": 0,
+                "spawnSpread": 0 
             }, {
-                "enemyType": 'scaryEnemy',
+                "enemyType": "scaryEnemy",
                 "enemyProps": {
-                    // Empty by default
+                    
                 },
-                "enemyCount": 1 // Spawn a single enemy - this is default
-                "spawnDelay": 0 // Spawns immediately - this is default
-                "spawnSpread": 0 // All enemies spawn at the same time - this is default
+                "enemyCount": 1, 
+                "spawnDelay": 30, 
+                "spawnSpread": 0 
             }
         ]
 ]}

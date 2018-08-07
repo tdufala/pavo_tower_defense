@@ -1,0 +1,15 @@
+//Tower Design
+//all towers will take up same tilespace
+//if projectile object is null, uses a simple bullet with the damage maintained
+
+{
+	"name" : "towerName",
+	"cost" : 20,
+	"bullet_delay": 1000,
+	"projectile" : "<projectile object>" //(different projectiles have different shoot functions)
+	"x": 100,
+	"y": 100,
+	"radius" : 50,
+	"damage" : 10  //damage affects that done by bullet, can be manually changed later
+
+}
