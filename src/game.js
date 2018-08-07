@@ -38,10 +38,16 @@ function windowOnLoad() {
 // ======== Towers ========
 
 class Tower extends Phaser.GameObjects.Sprite {
-    constructor(scene) {
-        super(this, scene, 0, 0, 'blueCircle');
+    constructor(scene, x, y, key) {
+        super(scene, x, y, key);
+		this.scene = scene;
+		this.type = key;
     }
-    // TODO: Fill in the blanks...
+	loadTower(){
+		//load from preloaded json file (must be loaded in scene previously due to async nature of call)
+		//loads BASE specs of tower, does not depend on upgrade
+		this.specs = this.scene.cache.get(this.type);
+	}
 
 };
 
@@ -60,7 +66,6 @@ class Enemy extends Phaser.GameObjects.Sprite {
 	
 	
    update() {
-        // TODO: Fix this function
 		if (this.specs.type == 'ground'){
 			var t = this.z;
 			var vec = this.getData('vector');
@@ -69,7 +74,7 @@ class Enemy extends Phaser.GameObjects.Sprite {
 			this.setDepth(this.y);
 		}
 
-		//if the enemy is past the end of the map TODO: add or statement for air units
+		//if the enemy is past the end of the map TODO: add 'or' clause for air units
 		if (this.specs.type == 'ground' && vec.x >= this.scene.map_width){
 			this.scene.lives -= 1;
 			this.destroy();
@@ -95,10 +100,10 @@ var StartMenuScene = class extends Phaser.Scene {
     }
 
     create() {
-        var startMenuText = this.add.text(75, 75, 'Start Menu', { fontSize: '100px', color:'#0000FF'});
-        var level1Text = this.add.text(75, 200, 'Level 1', { fontSize: '50px', color:'#00FF00' });
-        var level2Text = this.add.text(75, 300, 'Level 2', { fontSize: '50px', color:'#00FF00' });
-        var level3Text = this.add.text(75, 400, 'Level 3', { fontSize: '50px', color:'#00FF00' });
+        var startMenuText = this.add.text(75, 75, 'Start Menu', { fontFamily: 'Helvetica, Arial' ,fontSize: '100px', color:'#0000FF'});
+        var level1Text = this.add.text(75, 200, 'Level 1', { fontFamily: 'Helvetica, Arial' ,fontSize: '50px', color:'#00FF00' });
+        var level2Text = this.add.text(75, 300, 'Level 2', { fontFamily: 'Helvetica, Arial' ,fontSize: '50px', color:'#00FF00' });
+        var level3Text = this.add.text(75, 400, 'Level 3', { fontFamily: 'Helvetica, Arial' ,fontSize: '50px', color:'#00FF00' });
         // Start Button
         var lvl1Start = this.add.sprite(this.sys.canvas.width - 125, 225, 'blueButton').setInteractive();
 
@@ -134,7 +139,7 @@ class gameOver extends Phaser.Scene{
 	}
 	
 	create(){
-		var background = this.add.image(672,548,'game_over');
+		var background = this.add.image(672,448,'game_over');	
 		background.setScale(0.7);
 		
 		 // ---- UI elements ----
@@ -192,6 +197,9 @@ class LevelScene extends Phaser.Scene {
 		this.load.image('normalEnemy', 'assets/images/normalEnemy.png');
 		this.load.json('scaryEnemy', 'src/enemies/scaryEnemy.json');
 		this.load.image('scaryEnemy', 'assets/images/scaryEnemy.png');
+		this.load.json('basicTower', 'src/towers/basicTower.json');
+		this.load.image('basicTower', 'assets/images/basicTower.png');
+		
 		
 		
     }
@@ -212,7 +220,25 @@ class LevelScene extends Phaser.Scene {
         var tiles = this.map.addTilesetImage('tileset', 'gameTiles');
 		// Set map layers
         this.backgroundLayer = this.map.createStaticLayer('background', tiles);
-        this.rockLayer = this.map.createStaticLayer('rocks', tiles);
+        this.map.createStaticLayer('rocks', tiles);
+		this.towerPlaceable = this.map.createStaticLayer('towerPlacement', tiles);
+		this.map.createStaticLayer('towerBorder', tiles);
+		this.map.createStaticLayer('towers', tiles);
+		
+		// ----- Tower -----
+		this.towers = this.add.group();
+		
+		this.map.findObject('towerProps', function(obj){
+			     var tower = new Tower(this, obj.x, obj.y, 'basicTower');
+				 this.towers.add(tower);
+				tower.setInteractive();
+				tower.on('pointerdown', function(pointer){
+					console.log('testing powerdown works');
+				})
+				 console.log(tower);
+			}, this); 
+		
+		
 	    
         // ---- Graphics ----
         this.graphics = this.add.graphics();
@@ -285,18 +311,18 @@ var Level1Scene = class extends LevelScene {
 		this.air_enemy_start    = this.ground_enemy_start;
 		this.air_enemy_stop     = this.ground_enemy_stop;
 		
-		//initiate player gold.
-		this.gold = 500;
-		
-		//initiate player lives
-		this.lives = 10;
+
 		
 
     }
 
     preload() {
         super.preload();
+		//initiate player gold.
+		this.gold = 500;
 		
+		//initiate player lives
+		this.lives = 10;
     }
 
     create() {

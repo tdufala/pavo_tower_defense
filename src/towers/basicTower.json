@@ -1,0 +1,10 @@
+{
+	"name" : "basicTower",
+	"cost" : 20,
+	"bullet_delay": 1000,
+	"projectile" : "basicProjectile",
+	"x": 100,
+	"y": 100,
+	"radius" : 50,
+	"damage" : 10  
+}
