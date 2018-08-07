@@ -18,6 +18,7 @@ var config = {
     width: 1344,
     height: 1096,
     pixelArt: true, // antialias: false, roundPixels: true
+	useTicker: true,
     scene: scenes
 };
 
@@ -29,6 +30,7 @@ function windowOnLoad() {
     scenes.push(Level1Scene);
     scenes.push(Level2Scene);
     scenes.push(Level3Scene);
+	scenes.push(gameOver);
     // Run the game
     game = new Phaser.Game(config);
 }
@@ -59,13 +61,19 @@ class Enemy extends Phaser.GameObjects.Sprite {
 	
    update() {
         // TODO: Fix this function
-        var t = this.z;
-        var vec = this.getData('vector');
-        this.scene.path.getPoint(t, vec);
-        this.setPosition(vec.x, vec.y);
-        this.setDepth(this.y);
-		//console.log("(" + vec.x + "," + vec.y + ")")
+		if (this.specs.type == 'ground'){
+			var t = this.z;
+			var vec = this.getData('vector');
+			this.scene.path.getPoint(t, vec);
+			this.setPosition(vec.x, vec.y);
+			this.setDepth(this.y);
+		}
 
+		//if the enemy is past the end of the map TODO: add or statement for air units
+		if (this.specs.type == 'ground' && vec.x >= this.scene.map_width){
+			this.scene.lives -= 1;
+			this.destroy();
+		}
     }
     // TODO: Fill in the blanks...
 };
@@ -116,6 +124,33 @@ var StartMenuScene = class extends Phaser.Scene {
 };
 
 
+class gameOver extends Phaser.Scene{
+	constructor(str) {
+		super('gameOver');
+	}
+	preload(){
+		this.load.image('game_over', 'assets/images/game_over.png');
+		this.load.image('blueButton', 'assets/images/blue_button09.png');
+	}
+	
+	create(){
+		var background = this.add.image(672,548,'game_over');
+		background.setScale(0.7);
+		
+		 // ---- UI elements ----
+        var startMenuText = this.add.text(this.sys.canvas.width - 300, this.sys.canvas.height - 100, 'Return to Menu', { fontSize: '50px', color:'#00FF00', rtl: true});
+		
+		// Back to start menu button
+        var btnStart = this.add.sprite(this.sys.canvas.width - 100, this.sys.canvas.height - 100, 'blueButton').setInteractive();
+        btnStart.setDisplaySize(100,100);
+        btnStart.on('pointerdown', function(event) {
+            this.scene.start('startMenu');
+        }, this); // Return to the start menu.
+	}
+	
+}
+
+
 // Base class for levels
 class LevelScene extends Phaser.Scene {
     constructor(str) {
@@ -138,6 +173,12 @@ class LevelScene extends Phaser.Scene {
         this.gold = -1;
         // Tower arrangement - could just reference
         this.towers = null;
+		
+		
+		//delay before next wave in seconds (default time set for first wave)
+		//TODO: CHANGE TO MORE PRACTICAL DELAY, delay is low for testing purposes
+		this.waveDelay = 5;
+		
     }
 
     preload() {
@@ -151,6 +192,7 @@ class LevelScene extends Phaser.Scene {
 		this.load.image('normalEnemy', 'assets/images/normalEnemy.png');
 		this.load.json('scaryEnemy', 'src/enemies/scaryEnemy.json');
 		this.load.image('scaryEnemy', 'assets/images/scaryEnemy.png');
+		
 		
     }
 
@@ -181,10 +223,51 @@ class LevelScene extends Phaser.Scene {
 
 	    // ---- Units ----
         this.enemyWaves = new EnemyWaves(this);
+		
+		//create text for lives
+		this.liveText = this.add.text(16,16, 'Lives: ' + this.lives, { fontSize: '24px', fill: '#000' })
+		
+		//create text for gold
+		this.goldText = this.add.text(16,40, 'Gold: ' + this.gold, { fontSize: '24px', fill: '#000' });
+		
+		//create timer
+		this.timer = this.time.addEvent({delay: this.waveDelay * 1000, repeat: 0});
+		
+		//create text for time until next wave
+		this.timeText = this.add.text(this.map_width - 270, 16, 'Next Wave in ' + this.waveDelay + 's', { fontSize: '24px', fill: '#000' })
     }
 
 	update() {
 		this.enemyWaves.update();
+		
+		//game is lost - go to new scene
+		if (this.lives <= 0){
+			this.lives = 0;
+		}
+		
+		
+		this.goldText.setText('Gold: ' + this.gold);
+		this.liveText.setText('Lives: ' + this.lives);
+
+		if (this.waveCount > 0){
+			this.timeText.setText('Next Wave in ' + Math.round(this.waveDelay * (1-this.timer.getProgress())) + 's')
+		} else {
+			this.timeText.setText('');
+		}
+		
+		//reset timer if necessary
+ 		if (this.timer.getProgress() == 1 && this.waveCount > 1){
+			this.timer.destroy();
+			this.timer = this.time.addEvent({delay: this.waveDelay * 1000, repeat: 0});
+			this.waveCount -=1;
+		} else if (this.timer.getProgress() == 1){
+			this.timer.destroy();
+			this.timeText.setText('');
+		}
+		
+		if (this.lives == 0){
+			this.scene.start('gameOver');
+		}
 
 	} 
 
@@ -204,6 +287,11 @@ var Level1Scene = class extends LevelScene {
 		
 		//initiate player gold.
 		this.gold = 500;
+		
+		//initiate player lives
+		this.lives = 10;
+		
+
     }
 
     preload() {
@@ -323,8 +411,8 @@ class EnemyWaves {
 						var enemy = new Enemy(this.scene, this.scene.ground_enemy_start.x, this.scene.ground_enemy_start.y, currentWave[j].enemyType);
 						enemy.loadEnemy();
 						wave.add(enemy, true);
-										//game object functions: https://photonstorm.github.io/phaser3-docs/Phaser.GameObjects.GameObject.html#setData__anchor
-						enemy.setData('vector', new Phaser.Math.Vector2());//, 'hp': 100, 'type': 'someobject defining motion', 'setmoredatahere': 0});
+						//game object functions: https://photonstorm.github.io/phaser3-docs/Phaser.GameObjects.GameObject.html#setData__anchor
+						enemy.setData('vector', new Phaser.Math.Vector2());
 						var speed = enemy.specs.speed;
 						//define animation
 						
@@ -336,7 +424,7 @@ class EnemyWaves {
 								ease: 'Linear',
 								duration: (Math.floor(this.scene.map_width/speed * 800)),
 								repeat: 0,
-								delay: 200*num + i * timeBetweenWaves * 1000
+								delay: 200*num + (i+1) * this.scene.waveDelay * 1000
 								
 							});
 						} else {
@@ -346,6 +434,7 @@ class EnemyWaves {
 				}
 
             }
+			this.scene.waveCount = this.waves.length;
         }
     }
     // Copied from previous iteration of code.
