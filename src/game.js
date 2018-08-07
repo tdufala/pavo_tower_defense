@@ -3,6 +3,9 @@
 'use strict';
 import 'phaser';
 import css from './stylesheets/main.css'
+/* const waveFuncs = require('./waves.js')
+const enemyFuncs = require('./enemy.js') */
+
 
 
 // ======== Globals ========
@@ -42,13 +45,27 @@ class Tower extends Phaser.GameObjects.Sprite {
 
 // ======== Enemy Units ========
 class Enemy extends Phaser.GameObjects.Sprite {
-    update(scene) {
+	constructor(scene, x, y, key){
+		super(scene, x, y, key);
+		this.scene = scene;
+		this.type = key;
+	}
+	
+	loadEnemy(){
+		this.specs = this.scene.cache.json.get(this.type);
+	}
+	
+	
+	
+   update() {
         // TODO: Fix this function
         var t = this.z;
         var vec = this.getData('vector');
-        scene.path.getPoint(t, vec);
+        this.scene.path.getPoint(t, vec);
         this.setPosition(vec.x, vec.y);
         this.setDepth(this.y);
+		//console.log("(" + vec.x + "," + vec.y + ")")
+
     }
     // TODO: Fill in the blanks...
 };
@@ -114,6 +131,13 @@ class LevelScene extends Phaser.Scene {
 		this.ground_enemy_stop  = { 'x': 0, 'y': 0 };
 		this.air_enemy_start    = this.ground_enemy_start;
 		this.air_enemy_stop     = this.ground_enemy_stop;
+		// Wave number - can be used for save states?
+        this.waveNum = 0;
+		// Game resources for the player
+        this.lives = -1;
+        this.gold = -1;
+        // Tower arrangement - could just reference
+        this.towers = null;
     }
 
     preload() {
@@ -122,7 +146,12 @@ class LevelScene extends Phaser.Scene {
         this.load.image('gameTiles', 'assets/spritesheets/towerDefense_tilesheet.png');
 		this.load.spritesheet('enemy_sprite', 'assets/spritesheets/towerDefense_tilesheet.png', { frameWidth: 64, frameHeight: 64} );
         this.load.tilemapTiledJSON(this.levelName, 'src/maps/' + this.levelName + '.json');
-        // this.load.json('waveFile' + this.levelName, this.waveFile);
+        this.load.json('waveFile' + this.levelName, this.waveFile);
+		this.load.json('normalEnemy', 'src/enemies/normalEnemy.json');
+		this.load.image('normalEnemy', 'assets/images/normalEnemy.png');
+		this.load.json('scaryEnemy', 'src/enemies/scaryEnemy.json');
+		this.load.image('scaryEnemy', 'assets/images/scaryEnemy.png');
+		
     }
 
     create() {
@@ -172,10 +201,14 @@ var Level1Scene = class extends LevelScene {
 
 		this.air_enemy_start    = this.ground_enemy_start;
 		this.air_enemy_stop     = this.ground_enemy_stop;
+		
+		//initiate player gold.
+		this.gold = 500;
     }
 
     preload() {
         super.preload();
+		
     }
 
     create() {
@@ -244,10 +277,10 @@ class EnemyWaves {
         this.scene = scene;
         this.waves = []
         // The scene provides a JSON waveFile we use to generate waves
-        var waveFileJSON = this.scene.cache.json.get('waveFile' + this.scene.waveFile);
+        var waveFileJSON = this.scene.cache.json.get('waveFile' + this.scene.levelName);
         // TODO: Uncomment once this is working
-        // this.generateWaves(waveFileJSON);
-        this.testGenerateWaves(1, 10);
+        this.generateWaves(waveFileJSON);
+		//this.testGenerateWaves(1, 10);
     }
 
     generateWaves(waveFileJSON) { // TODO: IMPLEMENT
@@ -268,25 +301,57 @@ class EnemyWaves {
         //      ]
         //   ]
         //   numEnemies: Number }
-        for (var i = 0; i < waveFileJSON.waves.length; ++i) {
+		var num=0;
+        for (var i = 0; i < waveFileJSON.waves.length; i++) {
             // Create a group for our wave
-            this.waves.push(this.scene.add.group());
-            currentWave = waveFileJSON.waves[i];
-            for (var j = 0; j < currentWave.length; ++j) {
+			var wave = this.scene.add.group();
+            this.waves.push(wave);
+            var currentWave = waveFileJSON.waves[i];
+			
+			//time between waves in seconds (low just for testing, should be incorporated into level scene)
+			var timeBetweenWaves = 5;
+			
+            for (var j = 0; j < currentWave.length; j++) {
                 // TODO: handle enemyType property
                 // TODO: handle enemyProps property
                 // TODO: handle enemyCount property
                 // TODO: handle spawnDelay property
                 // TODO: handle spawnSpread property
                 // TODO: generate enemies, put them into the wave
+				
+					for (var n = 0; n < currentWave[j].enemyCount; n++){
+						var enemy = new Enemy(this.scene, this.scene.ground_enemy_start.x, this.scene.ground_enemy_start.y, currentWave[j].enemyType);
+						enemy.loadEnemy();
+						wave.add(enemy, true);
+										//game object functions: https://photonstorm.github.io/phaser3-docs/Phaser.GameObjects.GameObject.html#setData__anchor
+						enemy.setData('vector', new Phaser.Math.Vector2());//, 'hp': 100, 'type': 'someobject defining motion', 'setmoredatahere': 0});
+						var speed = enemy.specs.speed;
+						//define animation
+						
+						if (enemy.specs.type == 'ground'){
+							this.scene.tweens.add({
+							//can use conditional in update to change path if unit is flying
+								targets: enemy,
+								z: 1,
+								ease: 'Linear',
+								duration: (Math.floor(this.scene.map_width/speed * 800)),
+								repeat: 0,
+								delay: 200*num + i * timeBetweenWaves * 1000
+								
+							});
+						} else {
+							console.log('add air enemy');
+						}
+					num++;
+				}
+
             }
         }
-        
     }
     // Copied from previous iteration of code.
     // Can be used to test generating waves of enemies for basic purposes.
     // Should use generateWaves with a .json file for more control over what enemies spawn, when, etc.
-    testGenerateWaves(numWaves, enemiesPerWave) { 
+/*     testGenerateWaves(numWaves, enemiesPerWave) { 
         for (var i = 0; i < numWaves; i++) {
             // Each wave is a group
             this.waves.push(this.scene.add.group());
@@ -296,13 +361,12 @@ class EnemyWaves {
 	        	//if certain type create of type i.e. enemy-sprite
 	        	
                 var enemy = new Enemy(this.scene, this.scene.ground_enemy_start.x, this.scene.ground_enemy_start.y, 'greenCircle');
-                this.waves[i].add(enemy);
+                
 	        	//else do something with air units
 	        	
 	        	
 	        	//game object functions: https://photonstorm.github.io/phaser3-docs/Phaser.GameObjects.GameObject.html#setData__anchor
                 enemy.setData('vector', new Phaser.Math.Vector2());//, 'hp': 100, 'type': 'someobject defining motion', 'setmoredatahere': 0});
-	        
 	        	var velocity = 100; //pixels/sec
 	        	
 	        	//define animation
@@ -320,21 +384,19 @@ class EnemyWaves {
             }
         }
         
-    }
+    } */
 
     update() {
         // This currently calls update() on every single enemy. Could be changed to just update the current wave.
 		this.scene.graphics.clear();
 
 		this.scene.graphics.lineStyle(0, 0, 0);
-
 		this.scene.path.draw(this.scene.graphics);
-        for (var i = 0; i < this.waves.length; ++i) {
+        for (var i = 0; i < this.waves.length; i++) {
             var enemies = this.waves[i].getChildren();
-            for (var j = 0; j < enemies.length; ++j) {
-                //console.log(enemies[j]);
-                enemies[j].setVisible(true);
-                enemies[j].update(this.scene);
+            for (var j = 0; j < enemies.length; j++) {
+				enemies[j].update();
+				
             }
         }
     }
@@ -349,15 +411,10 @@ class Player {
             this.playerName = name;
         else
             this.playerName = "Player 1";
-        // Game resources for the player
-        this.lives = -1;
-        this.gold = -1;
-        // Tower arrangement - could just reference
-        this.towers = null;
+
         // String representing the level the player is on - can be used for save states?
         this.levelID = null;
-        // Wave number - can be used for save states?
-        this.waveNum = 0;
+
     }
     
 };

@@ -1,5 +1,5 @@
 {
-    "name": "normalEnemy",
+    "name": "scaryEnemy",
 	"type": "ground",
 	"hp": 100,
 	"skills": {},	
