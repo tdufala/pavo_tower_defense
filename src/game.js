@@ -149,8 +149,9 @@ class Enemy extends Phaser.GameObjects.PathFollower {
 		//this.setPosition(vec.x, vec.y);
 		//this.setDepth(this.y);
 
-		//if the enemy is past the end of the map TODO: add 'or' clause for air units
+		//if the enemy is past the end of the map
 		if (this.pathVector.x >= this.scene.mapWidth){
+		//if (this.specs.type == 'ground' && (vec.x == this.scene.enemy_stop.x && vec.y == this.scene.enemy_stop.y)){
 			this.scene.lives -= 1;
 			this.destroy();
 		}
@@ -242,13 +243,28 @@ class LevelScene extends Phaser.Scene {
 
 		this.enemySpawn = { 'x': 0, 'y': 0 };
 		this.enemyGoal  = { 'x': 0, 'y': 0 };
+
+		// Wave number - can be used for save states?
+        this.waveNum = 0;
+		// Game resources for the player
+        this.lives = -1;
+        this.gold = -1;
+        // Tower arrangement - could just reference
+        this.towers = null;
+		
+		
+		//delay before next wave in seconds (default time set for first wave)
+		//TODO: CHANGE TO MORE PRACTICAL DELAY, delay is low for testing purposes
+		this.waveDelay = 5;
+		
     }
 
     preload() {
         // Load common assets
         this.load.image('blueButton', 'assets/images/blue_button09.png');
-        this.load.image('gameTiles', 'assets/spritesheets/towerDefense_tilesheet.png');
 		this.load.spritesheet('enemySprite', 'assets/spritesheets/towerDefense_tilesheet.png', { frameWidth: 64, frameHeight: 64} );
+        this.load.image('gameTiles', 'assets/spritesheets/minimalTilesTowers.png');
+		//this.load.spritesheet('enemy_sprite', 'assets/spritesheets/towerDefense_tilesheet.png', { frameWidth: 64, frameHeight: 64} );
         this.load.tilemapTiledJSON(this.levelName, 'src/maps/' + this.levelName + '.json');
         this.load.json('waveFile' + this.levelName, this.waveFile);
 		this.load.json('normalEnemy', 'src/enemies/normalEnemy.json');
@@ -274,43 +290,58 @@ class LevelScene extends Phaser.Scene {
         this.map = this.add.tilemap(this.levelName);
         var tiles = this.map.addTilesetImage('tileset', 'gameTiles');
 		// Set map layers
+		//this.towerPlaceable = this.map.createStaticLayer('towerPlace', tiles);
         this.backgroundLayer = this.map.createStaticLayer('background', tiles);
-        this.map.createStaticLayer('rocks', tiles);
-		this.towerPlaceable = this.map.createStaticLayer('towerPlacement', tiles);
-		this.map.createStaticLayer('towerBorder', tiles);
-		this.map.createStaticLayer('towers', tiles);
-
+		
 		// ----- Tower -----
-		player.towers = this.add.group();
-
-		this.map.findObject('towerProps', function(obj){
-		    var tower = new Tower(this, obj.x, obj.y, obj.name);
-		    this.towers.add(tower);
-		}, this);
-
-
-
+		this.towers = this.add.group();
+		
+/* 		this.map.findObject('towerProps', function(obj){
+			     var tower = new Tower(this, obj.x, obj.y, obj.name);
+				 tower.loadTower();
+				 this.towers.add(tower);
+			}, this); 
+		 */
+		
+	    
         // ---- Graphics ----
         this.graphics = this.add.graphics();
 	    this.path = new Phaser.Curves.Path();
- 	    //this.line1 = new Phaser.Curves.Line([ this.enemySpawn.x, this.enemySpawn.y, 288, 576 ]);
- 	    this.line1 = new Phaser.Curves.Line([ this.enemySpawn.x, this.enemySpawn.y, this.enemySpawn.x, this.enemySpawn.y ]);
-	    this.path.add(this.line1);
+		
+		
+		//create path for ground objects and initialize starting points
+		var pathObjects = this.map.getObjectLayer('GameObjects').objects;
+		console.log(pathObjects);
+		for (var i = 0; i < pathObjects.length; i++){
+			if (pathObjects[i].name == 'StartPoint'){
+				this.enemy_start.x = pathObjects[i].x;
+				this.enemy_start.y = pathObjects[i].y;
+				this.path.add(new Phaser.Curves.Line([ this.enemy_start.x, this.enemy_start.y, this.enemy_start.x, this.enemy_start.y ]));
+			} else if (pathObjects[i].name == 'FinishPoint'){
+				this.enemy_stop.x = pathObjects[i].x;
+				this.enemy_stop.y = pathObjects[i].y;
+			} else {
+				for (var j = 0; j < pathObjects[i].polyline.length; j++){
+					this.path.lineTo(pathObjects[i].polyline[j].x + this.enemy_start.x, pathObjects[i].polyline[j].y + this.enemy_start.y);
+				}
+			} 
+		}
+		this.path.lineTo(this.enemy_stop.x, this.enemy_stop.y);
 
 	    // ---- Units ----
         this.enemyWaves = new EnemyWaves(this);
 
 		//create text for lives
-		this.liveText = this.add.text(16,16, 'Lives: ' + player.lives, { fontSize: '24px', fill: '#000' })
-
+		this.liveText = this.add.text(16,16, 'Lives: ' + player.lives, { fontSize: '24px', fill: '#FFF' })
+		
 		//create text for gold
-		this.goldText = this.add.text(16,40, 'Gold: ' + player.gold, { fontSize: '24px', fill: '#000' });
+		this.goldText = this.add.text(16,40, 'Gold: ' + player.gold, { fontSize: '24px', fill: '#FFF' });
 
 		//create timer
 		this.timer = this.time.addEvent({delay: this.enemyWaves, repeat: 0});
 
 		//create text for time until next wave
-		this.timeText = this.add.text(this.mapWidth - 270, 16, 'Next Wave in ' + this.waveDelay + 's', { fontSize: '24px', fill: '#000' })
+		this.timeText = this.add.text(this.mapWidth - 270, 16, 'Next Wave in ' + this.waveDelay + 's', { fontSize: '24px', fill: '#FFF' })
     }
 
 	update() {
@@ -366,10 +397,6 @@ var Level1Scene = class extends LevelScene {
                                    'y': 18 * this.tileSize.y};
 		this.enemyGoal  = {'x': this.mapWidth + 2 * this.tileSize.x,
                                    'y': 10 * this.tileSize.y};
-
-
-
-
     }
 
     preload() {
@@ -387,19 +414,6 @@ var Level1Scene = class extends LevelScene {
 
 		//Load and initiate wave information
 
-		//Wave motionpath workflow
-		//set path as lines
-				//this.load.image('enemySprite', 32, 576, 'sprites', 245);
-		//this.add.sprite(32, 576, 'enemySprite', 245);
-
-	    this.path.lineTo(9 * this.tileSize.x, this.enemySpawn.y);
-	    this.path.lineTo(9 * this.tileSize.x, 6 * this.tileSize.y);
-	    this.path.lineTo(21 * this.tileSize.x, 6 * this.tileSize.y);
-	    this.path.lineTo(21 * this.tileSize.x, 24 * this.tileSize.y);
-	    this.path.lineTo(34 * this.tileSize.x, 24 * this.tileSize.y);
-	    this.path.lineTo(34 * this.tileSize.x, 10 * this.tileSize.y);
-	    this.path.lineTo(this.enemyGoal.x, this.enemyGoal.y);
-	    //then add points to go to
 
 
 
@@ -414,6 +428,7 @@ var Level2Scene = class extends LevelScene {
 
     preload() {
         super.preload();
+		this.lives = 10;
     }
 
     create() {
@@ -429,6 +444,7 @@ var Level3Scene = class extends LevelScene {
 
     preload() {
         super.preload();
+		this.lives = 10;
     }
 
     create() {
@@ -485,7 +501,33 @@ class EnemyWaves {
                 // TODO: handle spawnDelay property
                 // TODO: handle spawnSpread property
                 // TODO: generate enemies, put them into the wave
-
+				// Added on master
+				for (var n = 0; n < currentWave[j].enemyCount; n++){
+						var enemy = new Enemy(this.scene, this.scene.enemy_start.x, this.scene.enemy_start.y, currentWave[j].enemyType);
+						enemy.loadEnemy();
+						wave.add(enemy, true);
+						//game object functions: https://photonstorm.github.io/phaser3-docs/Phaser.GameObjects.GameObject.html#setData__anchor
+						enemy.setData('vector', new Phaser.Math.Vector2());
+						var speed = enemy.specs.speed;
+						//define animation
+						
+						if (enemy.specs.type == 'ground'){
+							this.scene.tweens.add({
+							//can use conditional in update to change path if unit is flying
+								targets: enemy,
+								z: 1,
+								ease: 'Linear',
+								duration: (Math.floor(this.scene.map_width/speed * 800)),
+								repeat: 0,
+								delay: 200*num + (i+1) * this.scene.waveDelay * 1000
+								
+							});
+						} else {
+							console.log('add air enemy');
+						}
+					num++;
+				}
+                // Mine is below
 				for (var n = 0; n < currentWave[j].enemyCount; n++){
                     var delay = 200*i + (i+1) * this.scene.waveDelay * 1000;
 					var enemy = new Enemy(this.scene, this.scene.path, currentWave[j].enemyType, delay);
