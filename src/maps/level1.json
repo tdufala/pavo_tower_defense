@@ -1,4 +1,4 @@
-ght":14,
+{ "height":14,
  "infinite":false,
  "layers":[
         {
@@ -29,6 +29,28 @@ ght":14,
          "draworder":"topdown",
          "name":"GameObjects",
          "objects":[
+                {
+                 "height":57,
+                 "id":3,
+                 "name":"StartPoint",
+                 "rotation":0,
+                 "type":"",
+                 "visible":true,
+                 "width":8,
+                 "x":0,
+                 "y":736
+                }, 
+                {
+                 "height":64,
+                 "id":2,
+                 "name":"FinishPoint",
+                 "rotation":0,
+                 "type":"",
+                 "visible":true,
+                 "width":5,
+                 "x":1338,
+                 "y":352
+                }, 
                 {
                  "height":0,
                  "id":1,
@@ -88,17 +110,6 @@ ght":14,
                  "width":0,
                  "x":0,
                  "y":733
-                }, 
-                {
-                 "height":64,
-                 "id":2,
-                 "name":"FinishPoint",
-                 "rotation":0,
-                 "type":"",
-                 "visible":true,
-                 "width":5,
-                 "x":1338,
-                 "y":320
                 }],
          "opacity":1,
          "type":"objectgroup",
@@ -106,7 +117,7 @@ ght":14,
          "x":0,
          "y":0
         }],
- "nextobjectid":3,
+ "nextobjectid":16,
  "orientation":"orthogonal",
  "renderorder":"right-down",
  "tiledversion":"1.1.5",
