@@ -125,6 +125,7 @@ class Tower extends Phaser.GameObjects.Sprite {
 						gameObject.purch++;
 						gameObject.setPosition(pointerTileX * this.scene.tileSize + this.scene.tileSize/2, pointerTileY * this.scene.tileSize + this.scene.tileSize/2);
 						gameObject.isOn = true;
+						gameObject.disableInteractive();
 						if (gameObject.purch == 1){
 							player.gold -= gameObject.cost;
 							var newTower = new Tower(gameObject.scene, gameObject.startPos.x, gameObject.startPos.y, gameObject.name);
@@ -219,11 +220,14 @@ class Enemy extends Phaser.GameObjects.PathFollower {
 		super(scene, path, -Infinity, -Infinity, name);
 		this.scene = scene;
 		this.name = name;
+    var config = this.scene.cache.json.get(this.name);
         this.spawnDelay = spawnDelay;
-
-		var config = this.scene.cache.json.get(this.name);
-        this.hp = config.hp || 1;
-        this.bounty = config.bounty || 0;
+        this.hp = config.hp;
+		  this.hpStart = config.hp;
+        this.bounty = config.bounty;
+        this.setActive(false);
+        this.setVisible(false);
+		  this.hpBar = this.scene.add.graphics();
 
 
         // Add animation
@@ -262,19 +266,28 @@ class Enemy extends Phaser.GameObjects.PathFollower {
     }
 
     // Starts being called after this.active == true (from setActive)
+
     update(time, delta) {
+		this.hpBar.clear();
+		this.hpBar.lineStyle(1, 0x00FF00, 1);
+		this.hpBar.fillStyle(0x00FF0000, 1);
+		this.hpBar.fillRect(this.x - this.hpStart/2, this.y - this.scene.tileSize/2, this.hp, 10);
+		this.hpBar.strokeRect(this.x - this.hpStart/2, this.y - this.scene.tileSize/2, this.hpStart, 10);
         // Check if we've been killed.
         // If so, give player gold and get destroyed.
         if(this.hp <= 0) {
             player.gold += this.bounty;
+			this.hpBar.destroy();
             this.destroy();
         }
 
 		//if the enemy is past the end of the map
 		if (this.active && !this.isFollowing()) {
 			player.lives--;
+			this.hpBar.destroy();
 			this.destroy();
 		}
+
     }
 };
 
