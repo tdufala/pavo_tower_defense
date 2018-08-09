@@ -1,6 +1,6 @@
 {
 	"name" : "basicProjectile",
 	"speed" : 10,
-	"damage" : 30,
+	"damage" : 10,
 	"image" : "basicProjectile.png"
 }
