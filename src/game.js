@@ -43,7 +43,7 @@ class Tower extends Phaser.GameObjects.Sprite {
 		this.scene = scene;
 		this.type = key;
 		this.isDraggable = false;
-		this.setActive();
+		this.startPos = {'x': x, 'y': y};
     }
 	loadTower(){
 		//load from preloaded json file (must be loaded in scene previously due to async nature of call)
@@ -54,27 +54,57 @@ class Tower extends Phaser.GameObjects.Sprite {
 	
 	update(){
 		
- 		if (this.scene.gold >= this.specs.cost){
+ 		//if (this.scene.gold >= this.specs.cost){
 			if (!this.isDraggable){
-				this.setVisible(true);
-				this.setDepth(1000);
-				this.setInteractive();
+
+						this.setInteractive();
 				this.scene.input.setDraggable(this);
 				this.isDraggable = true;
+				   this.scene.input.on('dragstart', function (pointer, gameObject) {
+
+					gameObject.setAlpha(0.5);
+
+				});
 				this.scene.input.on('drag', function (pointer, gameObject, dragX, dragY) {
 
-					gameObject.x = dragX;
-					gameObject.y = dragY;
-					console.log(dragX + ',' + dragY);
+					gameObject.setPosition(dragX, dragY);
+				});
+				this.scene.input.on('dragend', function(pointer, gameObject){
+					
+					gameObject.setAlpha(1);
+					    // Snap to tile coordinates, but in world space
+					var pointerTileX = this.scene.map.worldToTileX(pointer.x);
+					var pointerTileY = this.scene.map.worldToTileY(pointer.y);
+					var canPlace = false;
+					this.scene.towerPlaceable.findTile(function(tile){
+
+						if (tile.x == pointerTileX && tile.y == pointerTileY){
+							if (tile.index == 1){
+
+								canPlace = true;
+							}
+							return true;
+							
+						}
+					
+					});
+					if (canPlace){
+						gameObject.setPosition(pointerTileX * this.scene.tileSize + this.scene.tileSize/2, pointerTileY * this.scene.tileSize + this.scene.tileSize/2);
+
+					} else {
+						gameObject.setPosition(gameObject.startPos.x, gameObject.startPos.y);
+
+					}
+
 				});
 			}
-		} else {
+/* 		} else {
 			if (this.isDraggable){
 				this.scene.input.setDraggable(this, false);
 				this.scene.input.disableInteractive();
 				this.isDraggable = true;
 			}
-		} 
+		}  */
 	}
 
 
@@ -192,7 +222,7 @@ class LevelScene extends Phaser.Scene {
         this.levelName = str;
 		this.map_width = 1344;
         this.map_height = 896;
-        this.tileSize = { 'x': 32, 'y': 32 };
+        this.tileSize = 64;
         this.waveFile = 'src/waves/' + this.levelName + '.json';
         this.enemyWaves = null;
 
@@ -217,8 +247,7 @@ class LevelScene extends Phaser.Scene {
     preload() {
         // Load common assets
         this.load.image('blueButton', 'assets/images/blue_button09.png');
-        this.load.image('gameTiles', 'assets/spritesheets/minimalTilesTowers.png');
-		//this.load.spritesheet('enemy_sprite', 'assets/spritesheets/towerDefense_tilesheet.png', { frameWidth: 64, frameHeight: 64} );
+        this.load.image('gameTiles', 'assets/spritesheets/minimalTilesTowers.png', { frameWidth: 64, frameHeight: 64});
         this.load.tilemapTiledJSON(this.levelName, 'src/maps/' + this.levelName + '.json');
         this.load.json('waveFile' + this.levelName, this.waveFile);
 		this.load.json('normalEnemy', 'src/enemies/normalEnemy.json');
@@ -228,11 +257,10 @@ class LevelScene extends Phaser.Scene {
 		this.load.json('basicTower', 'src/towers/basicTower.json');
 		this.load.image('basicTower', 'assets/images/basicTower.png');
 		
-		
-		
     }
 
     create() {
+
         // ---- UI elements ----
         var startMenuText = this.add.text(this.sys.canvas.width - 300, this.sys.canvas.height - 100, 'Return to Menu', { fontSize: '50px', color:'#00FF00', rtl: true});
 
@@ -247,19 +275,16 @@ class LevelScene extends Phaser.Scene {
         this.map = this.add.tilemap(this.levelName);
         var tiles = this.map.addTilesetImage('tileset', 'gameTiles');
 		// Set map layers
-		//this.towerPlaceable = this.map.createStaticLayer('towerPlace', tiles);
+		this.towerPlaceable = this.map.createStaticLayer('towerPlace', tiles);
         this.backgroundLayer = this.map.createStaticLayer('background', tiles);
 
 		
 		// ----- Tower -----
 		this.towers = this.add.group();
-		
-/* 		this.map.findObject('towerProps', function(obj){
-			     var tower = new Tower(this, obj.x, obj.y, obj.name);
-				 tower.loadTower();
-				 this.towers.add(tower);
-			}, this); 
-		 */
+
+		//bottom right 5 tiles used for tower placement
+		var tower = new Tower(this, this.tileSize / 2, this.map_height - this.tileSize/2, 'basicTower' );
+		this.towers.add(tower, true);
 		
 	    
         // ---- Graphics ----
@@ -269,7 +294,6 @@ class LevelScene extends Phaser.Scene {
 		
 		//create path for ground objects and initialize starting points
 		var pathObjects = this.map.getObjectLayer('GameObjects').objects;
-		console.log(pathObjects);
 		for (var i = 0; i < pathObjects.length; i++){
 			if (pathObjects[i].name == 'StartPoint'){
 				this.enemy_start.x = pathObjects[i].x;
@@ -303,6 +327,8 @@ class LevelScene extends Phaser.Scene {
 		this.timeText = this.add.text(this.map_width - 270, 16, 'Next Wave in ' + this.waveDelay + 's', { fontSize: '24px', fill: '#FFF' })
 		
 
+		
+		
 			
 		
     }
@@ -368,7 +394,7 @@ var Level1Scene = class extends LevelScene {
 		this.gold = 500;
 		
 		//initiate player lives
-		this.lives = 10;
+		this.lives = 100;
     }
 
     create() {
