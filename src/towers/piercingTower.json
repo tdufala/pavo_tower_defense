@@ -1,0 +1,8 @@
+{
+	"name" : "piercingTower",
+	"cost" : 30,
+	"bullet_delay": 500,
+	"projectile" : "piercingProjectile",
+	"radius" : 400,
+	"damage" : 10  
+}

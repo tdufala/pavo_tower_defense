@@ -3,6 +3,6 @@
 	"cost" : 20,
 	"bullet_delay": 500,
 	"projectile" : "basicProjectile",
-	"radius" : 300,
+	"radius" : 200,
 	"damage" : 10  
 }
