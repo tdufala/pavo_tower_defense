@@ -1,14 +1,14 @@
 {
-"enemies": [
+"enemies": {
     "bigNormalEnemy": {
         "altType": "normalEnemy",
         "enemyProps": {
             "health": 1000
         }
     }
-],
+},
 "waves": [
-    [ // Wave 1
+    [
         {
             "enemyType": "normalEnemy"
         }, {
@@ -17,7 +17,7 @@
             "enemyType": "normalEnemy",
             "enemyCount": 2
         }
-    ], [  // Wave 2
+    ], [
         {
             "enemyType": "normalEnemy"
         }, {

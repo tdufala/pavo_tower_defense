@@ -1,21 +1,14 @@
-// spawnDelay - time in milliseconds from start of wave to spawn an enemy
-// spawnSpread - time in milliseconds between spawning enemies, for enemyCount > 1
-// enemyCount - number of enemies to spawn
-// enemyType - name which maps to an enemy JSON file used to load properties
-// enemyProps - object used to override what is set in the Enemy JSON file
 {
-"enemies": [
-    "normalEnemy": {},
-    
-    "scaryEnemy": {
+"enemies": {
+    "bigNormalEnemy": {
         "altType": "normalEnemy",
         "enemyProps": {
             "health": 1000
-        },
-    },
-],
+        }
+    }
+},
 "waves": [
-    [ // Wave 1
+    [
         {
             "enemyType": "normalEnemy"
         }, {
@@ -24,7 +17,7 @@
             "enemyType": "normalEnemy",
             "enemyCount": 2
         }
-    ], [  // Wave 2
+    ], [
         {
             "enemyType": "normalEnemy"
         }, {

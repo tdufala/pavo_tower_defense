@@ -134,7 +134,6 @@ class Enemy extends Phaser.GameObjects.PathFollower {
         // Add animation
 		var speed = config.speed || 1;
         var duration = Math.floor(this.scene.mapWidth/speed * 1000);
-        console.log(this.duration);
         this.pathConfig = {
             ease: 'Linear',
             duration: duration,
@@ -197,10 +196,10 @@ var StartMenuScene = class extends Phaser.Scene {
     }
 
     create() {
-        var startMenuText = this.add.text(75, 75, 'Start Menu', { fontFamily: 'Helvetica, Arial' ,fontSize: '100px', color:'#0000FF'});
-        var level1Text = this.add.text(75, 200, 'Level 1', { fontFamily: 'Helvetica, Arial' ,fontSize: '50px', color:'#00FF00' });
-        var level2Text = this.add.text(75, 300, 'Level 2', { fontFamily: 'Helvetica, Arial' ,fontSize: '50px', color:'#00FF00' });
-        var level3Text = this.add.text(75, 400, 'Level 3', { fontFamily: 'Helvetica, Arial' ,fontSize: '50px', color:'#00FF00' });
+        var startMenuText = this.add.text(75, 75, 'Start Menu', { fontFamily: 'Helvetica, Arial', fontSize: '100px', color:'#0000FF'});
+        var level1Text = this.add.text(75, 200, 'Level 1', { fontFamily: 'Helvetica, Arial', fontSize: '50px', color:'#00FF00' });
+        var level2Text = this.add.text(75, 300, 'Level 2', { fontFamily: 'Helvetica, Arial', fontSize: '50px', color:'#00FF00' });
+        var level3Text = this.add.text(75, 400, 'Level 3', { fontFamily: 'Helvetica, Arial', fontSize: '50px', color:'#00FF00' });
         // Start Button
         var lvl1Start = this.add.sprite(this.sys.canvas.width - 125, 225, 'blueButton').setInteractive();
 
@@ -281,14 +280,22 @@ class LevelScene extends Phaser.Scene {
     }
 
     create() {
+		// ---- Tilemap ----
+        this.map = this.add.tilemap(this.levelName);
+        var tiles = this.map.addTilesetImage('tileset', 'gameTiles');
+		// Set map layers
+		this.towerPlaceable = this.map.createStaticLayer('towerPlace', tiles);
+        this.backgroundLayer = this.map.createStaticLayer('background', tiles);
 
         // ---- Player loading ----
         // TODO: Test purposes only. If we implement save states, this should be refactored.
-        player = new Player();
+        // Calling Player(name, gold, lives, waveNum, towers, levelName) - taking defaults for most
+        player = new Player(null, null, null, null, this.levelName);
 
         // ---- UI elements ----
         var startMenuText = this.add.text(this.sys.canvas.width - 300, this.sys.canvas.height - 100, 'Return to Menu', { fontSize: '50px', color:'#00FF00', rtl: true});
 
+        // ++ Buttons ++
         // Back to start menu button
         var menuButton = this.add.sprite(this.sys.canvas.width - 100, this.sys.canvas.height - 100, 'blueButton').setInteractive();
         menuButton.setDisplaySize(100,100);
@@ -302,20 +309,23 @@ class LevelScene extends Phaser.Scene {
         startWaveButton.on('pointerdown', function(event) {
             this.enemyWaves.startNextWave();
         }, this);
+		
+        // ++ Non-interactible indicators ++
+        // Life counter
+		this.liveText = this.add.text(16,16, 'Lives: ' + player.lives, { fontSize: '24px', fill: '#FFF' })
 
-		// ---- Tilemap ----
-        this.map = this.add.tilemap(this.levelName);
-        var tiles = this.map.addTilesetImage('tileset', 'gameTiles');
-		// Set map layers
-		this.towerPlaceable = this.map.createStaticLayer('towerPlace', tiles);
-        this.backgroundLayer = this.map.createStaticLayer('background', tiles);
+		// Gold counter
+		this.goldText = this.add.text(16,40, 'Gold: ' + player.gold, { fontSize: '24px', fill: '#FFF' });
 
-		// ----- Tower -----
-		this.towers = this.add.group();
+
+		// ----- Towers -----
+		player.towers = this.add.group({
+            runChildUpdate: true,
+        });
 
 		//bottom right 5 tiles used for tower placement
 		var tower = new Tower(this, this.tileSize / 2, this.mapHeight - this.tileSize/2, 'basicTower' );
-		this.towers.add(tower, true);
+		player.towers.add(tower, true);
 
 	    // Add path for enemies on this level.
 	    this.path = new Phaser.Curves.Path();
@@ -339,37 +349,19 @@ class LevelScene extends Phaser.Scene {
 		}
 		this.path.lineTo(this.enemyGoal.x, this.enemyGoal.y);
 
-	    // ---- Units ----
+	    // ---- Enemies ----
         this.enemyWaves = new EnemyWaves(this);
-
-		//create text for lives
-		this.liveText = this.add.text(16,16, 'Lives: ' + player.lives, { fontSize: '24px', fill: '#FFF' })
-
-		//create text for gold
-		this.goldText = this.add.text(16,40, 'Gold: ' + player.gold, { fontSize: '24px', fill: '#FFF' });
-
-		//create timer
-		this.timer = this.time.addEvent({delay: this.enemyWaves, repeat: 0});
-
     }
 
 	update(time, delta) {
-
-		var towers = this.towers.getChildren();
-		for (var i = 0; i < towers.length; i++){
-			towers[i].update();
-		}
-
-
-
-		//game is lost - go to new scene
+		// Check for game over, man.
 		if (player.lives <= 0){
 			player.lives = 0;
+            this.scene.start('gameOver');
 		}
 
-
-		this.goldText.setText('Gold: ' + player.gold);
 		this.liveText.setText('Lives: ' + player.lives);
+		this.goldText.setText('Gold: ' + player.gold);
 
 		//if (this.waveCount > 0){
 		//	this.timeText.setText('Next Wave in ' + Math.round(this.waveDelay * (1-this.timer.getProgress())) + 's')
@@ -386,10 +378,6 @@ class LevelScene extends Phaser.Scene {
 		//	this.timer.destroy();
 		//	this.timeText.setText('');
 		//}
-
-		if (player.lives <= 0){
-			this.scene.start('gameOver');
-		}
 	}
 
 };
@@ -411,6 +399,7 @@ var Level1Scene = class extends LevelScene {
     create() {
         super.create();
     }
+
 };
 
 // Level 2
@@ -572,8 +561,10 @@ class EnemyWaves {
 // ========= Player class ========
 // Contains information regarding the player, possibly cross-session
 // This class should be used to encapsulate any data we would want to use to generate save states.
+// This could come in handy for save states:
+// http://www.thebotanistgame.com/blog/2015/08/12/saving-loading-game-state-phaserjs.html
 class Player {
-    constructor(name, gold, lives, waveNum, towers, levelID) {
+    constructor(name, gold, lives, waveNum, towers, levelName) {
         // Lets us pass in a player name later if we wanted to create a leaderboard for instance
         this.playerName = name || "Player 1";
 		this.gold = gold || 500;
@@ -584,7 +575,7 @@ class Player {
         // Tower arrangement - could just reference
         this.towers = towers || null;
         // String representing the level the player is on - can be used for save states?
-        this.levelID = levelID || null;
+        this.levelName = levelName || null;
 
     }
 
@@ -594,6 +585,13 @@ class Player {
         // Could add parameters, or use globals
         // We should be able to use localStorage for save states, but have to be careful of
         // running the game in multiple tabs causing race conditions (leading to corruption) when we write to storage.
+    }
+    saveGame(saveFileName) {
+        // If no saveFileName provided, use player name?
+        // Use caution since these save files also track which level we're on.
+        // Might need different save files for each level, with different file names for each?
+        var saveFileName = saveFileName || this.playerName;
+        return saveFileName;
     }
 };
 
