@@ -347,7 +347,6 @@ class LevelScene extends Phaser.Scene {
 				}
 			}
 		}
-		this.path.lineTo(this.enemyGoal.x, this.enemyGoal.y);
 
 	    // ---- Enemies ----
         this.enemyWaves = new EnemyWaves(this);
