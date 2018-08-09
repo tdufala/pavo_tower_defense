@@ -158,7 +158,7 @@ class Tower extends Phaser.GameObjects.Sprite {
 				var nearestEnemy = {'index' : null, 'dist' : 1000};
 				for (var i = 0; i < enemies.length; i++){
 					var dist = Math.hypot(enemies[i].x - this.x, enemies[i].y - this.y);
-					if (!nearestEnemy.index || nearestEnemy.dist > dist){
+					if (nearestEnemy.index === null || nearestEnemy.dist > dist){
 						nearestEnemy.index = i;
 						nearestEnemy.dist = dist;
 					} 
@@ -216,15 +216,14 @@ class Projectile extends Phaser.GameObjects.Sprite {
 // ======== Enemy Units ========
 class Enemy extends Phaser.GameObjects.PathFollower {
 	constructor(scene, path, name, spawnDelay){
-		super(scene, path, 0, 0, name);
+		super(scene, path, -Infinity, -Infinity, name);
 		this.scene = scene;
 		this.name = name;
-		var config = this.scene.cache.json.get(this.name);
         this.spawnDelay = spawnDelay;
-        this.hp = config.hp;
-        this.bounty = config.bounty;
-        this.setActive(false);
-        this.setVisible(false);
+
+		var config = this.scene.cache.json.get(this.name);
+        this.hp = config.hp || 1;
+        this.bounty = config.bounty || 0;
 
 
         // Add animation
@@ -236,8 +235,10 @@ class Enemy extends Phaser.GameObjects.PathFollower {
             from: 0,
             to: 1,
             rotateToPath: true,
-            delay: 0
+            positionOnPath: true
         };
+        this.setActive(false);
+        this.setVisible(false);
     }
 
     // Sets up timers to spawn the unit
@@ -251,15 +252,17 @@ class Enemy extends Phaser.GameObjects.PathFollower {
 
     // Internal - Gets the unit out there to start doing stuff!
     getOutThere() {
+        // Starts animating
+        this.startFollow(this.pathConfig);
         // Starts updating
         this.setActive(true);
         this.setVisible(true);
-        // Starts animating -- note that it still waits for its spawnDelay before moving.
-        this.startFollow(this.pathConfig, false, 1, 1);
+        // Start in the correct position - must be done after startFollow()
+        this.setPosition(this.path.getStartPoint());
     }
 
     // Starts being called after this.active == true (from setActive)
-    update() {
+    update(time, delta) {
         // Check if we've been killed.
         // If so, give player gold and get destroyed.
         if(this.hp <= 0) {
@@ -389,7 +392,7 @@ class LevelScene extends Phaser.Scene {
         // ---- Player loading ----
         // TODO: Test purposes only. If we implement save states, this should be refactored.
         // Calling Player(name, gold, lives, waveNum, towers, levelName) - taking defaults for most
-        player= new Player(null, null, null, null, this.levelName);
+        player = new Player(null, null, null, null, this.levelName);
 
         // ---- UI elements ----
         var startMenuText = this.add.text(this.sys.canvas.width - 300, this.sys.canvas.height - 100, 'Return to Menu', { fontSize: '50px', color:'#00FF00', rtl: true});
@@ -678,7 +681,7 @@ class EnemyWaves {
 class Player {
     constructor(name, gold, lives, waveNum, towers, levelName) {
         // Lets us pass in a player name later if we wanted to create a leaderboard for instance
-        this.playerName = name || "Player 1";
+        this.name = name || "Player 1";
 		this.gold = gold || 100;
 		this.lives = lives || 10;
 
@@ -702,7 +705,7 @@ class Player {
         // If no saveFileName provided, use player name?
         // Use caution since these save files also track which level we're on.
         // Might need different save files for each level, with different file names for each?
-        var saveFileName = saveFileName || this.playerName;
+        var saveFileName = saveFileName || this.name;
         return saveFileName;
     }
 	
