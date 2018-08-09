@@ -254,7 +254,7 @@ class Enemy extends Phaser.GameObjects.PathFollower {
         this.setActive(false);
         this.setVisible(false);
 		this.hpBar = this.scene.add.graphics();
-
+		this.hpText = this.scene.add.text(0,0, '', { fontSize: '10px', fill: '#FFF' });
 
         // Add animation
 		var speed = config.speed || 1;
@@ -299,11 +299,16 @@ class Enemy extends Phaser.GameObjects.PathFollower {
 		this.hpBar.fillStyle(0x00FF0000, 1);
 		this.hpBar.fillRect(this.x - this.hpStart/2, this.y - this.scene.tileSize/2, this.hp, 10);
 		this.hpBar.strokeRect(this.x - this.hpStart/2, this.y - this.scene.tileSize/2, this.hpStart, 10);
+		this.hpText.setPosition(this.x-20, this.y - this.scene.tileSize/2);
+		this.hpText.setText(this.hp + '/' + this.hpStart);
+		//this.hpText.setOrigin(0,0);
+		
         // Check if we've been killed.
         // If so, give player gold and get destroyed.
         if(this.hp <= 0) {
             player.gold += this.bounty;
 			this.hpBar.destroy();
+			this.hpText.destroy();
             this.destroy();
         }
 
@@ -311,6 +316,7 @@ class Enemy extends Phaser.GameObjects.PathFollower {
 		if (this.active && !this.isFollowing()) {
 			player.lives--;
 			this.hpBar.destroy();
+			this.hpText.destroy();
 			this.destroy();
 		}
 
