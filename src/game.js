@@ -112,12 +112,14 @@ class Tower extends Phaser.GameObjects.Sprite {
 					var pointerTileX = this.scene.map.worldToTileX(pointer.x);
 					var pointerTileY = this.scene.map.worldToTileY(pointer.y);
 					var canPlace = false;
+					var towerTile;
 					this.scene.towerPlaceable.findTile(function(tile){
 						if (tile.x == pointerTileX && tile.y == pointerTileY){
 							if (tile.index == 1){
 								canPlace = true;
+								return true;
 							}
-							return true;
+							
 						}
 					});
 					gameObject.marker.setAlpha(0);
@@ -190,26 +192,50 @@ class Projectile extends Phaser.GameObjects.Sprite {
 		this.scene = scene;
 		this.damage = damage || config.damage;
 		this.target = target;
-
+		this.type = config.type;
+		if (this.type == 'piercing'){
+			this.targetAngle = Math.atan((this.y - this.target.y) / (this.x - this.target.x));
+			this.factor = (this.x < this.target.x) ? -1 : 1;
+			//timer used to make sure bullet doesn't inflict damage on same enemy twice
+			this.timer = this.scene.time.addEvent({delay: 100, repeat: 0});
+		}
+		
     }
 
 
     update() {
-		var angle = Math.atan((this.y - this.target.y) / (this.x - this.target.x));
-		var factor = 1;
-		if (this.x < this.target.x) factor = -1;
-        this.y -= this.speed * Math.sin(angle)* factor;
-        this.x -= this.speed * Math.cos(angle) * factor;
-
-        if (this.y < -50) {
-            this.setActive(false);
-            this.setVisible(false);
-        }
-		
-		var dist = Math.hypot(this.y - this.target.y, this.x - this.target.x);
-		if(dist <= this.scene.tileSize/2){
-			this.target.hp -= this.damage;
+		if (this.y < -50 || this.y > this.scene.mapHeight + 50 || this.x < -50 || this.x > this.scene.mapWidth + 50) {
+			this.setActive(false);
+			this.setVisible(false);
 			this.destroy();
+		}else if (this.type == 'basic'){
+			var angle = Math.atan((this.y - this.target.y) / (this.x - this.target.x));
+			var factor = 1;
+			if (this.x < this.target.x) factor = -1;
+			this.y -= this.speed * Math.sin(angle)* factor;
+			this.x -= this.speed * Math.cos(angle) * factor;
+			
+			var dist = Math.hypot(this.y - this.target.y, this.x - this.target.x);
+			if(dist <= this.scene.tileSize/2){
+				this.target.hp -= this.damage;
+				this.destroy();
+			}
+		} else if (this.type == 'piercing'){
+			var angle = this.targetAngle;
+					
+			this.y -= this.speed * Math.sin(angle)* this.factor;
+			this.x -= this.speed * Math.cos(angle) * this.factor;
+			
+			var enemies = this.scene.enemyWaves.activeEnemies;
+			for (let i = 0; i < enemies.length; i++){
+				var dist = Math.hypot(this.y - enemies[i].y, this.x - enemies[i].x);
+				if(dist <= this.scene.tileSize/2 && this.timer.getProgress() == 1){
+					enemies[i].hp -= this.damage;
+					this.timer.destroy();
+					this.timer = this.scene.time.addEvent({delay: 100, repeat: 0});
+				}
+			}
+			
 		}
     }
 };
@@ -220,14 +246,14 @@ class Enemy extends Phaser.GameObjects.PathFollower {
 		super(scene, path, -Infinity, -Infinity, name);
 		this.scene = scene;
 		this.name = name;
-    var config = this.scene.cache.json.get(this.name);
+		var config = this.scene.cache.json.get(this.name);
         this.spawnDelay = spawnDelay;
         this.hp = config.hp;
-		  this.hpStart = config.hp;
+		this.hpStart = config.hp;
         this.bounty = config.bounty;
         this.setActive(false);
         this.setVisible(false);
-		  this.hpBar = this.scene.add.graphics();
+		this.hpBar = this.scene.add.graphics();
 
 
         // Add animation
@@ -392,6 +418,10 @@ class LevelScene extends Phaser.Scene {
 		this.load.image('basicTower', 'assets/images/basicTower.png');
 		this.load.json('basicProjectile', 'src/projectiles/basicProjectile.json');
 		this.load.image('basicProjectile', 'assets/images/basicProjectile.png');
+		this.load.json('piercingTower', 'src/towers/piercingTower.json');
+		this.load.image('piercingTower', 'assets/images/piercingTower.png');
+		this.load.json('piercingProjectile', 'src/projectiles/piercingProjectile.json');
+		this.load.image('piercingProjectile', 'assets/images/piercingProjectile.png');
     }
 
     create() {
@@ -399,7 +429,7 @@ class LevelScene extends Phaser.Scene {
         this.map = this.add.tilemap(this.levelName);
         var tiles = this.map.addTilesetImage('tileset', 'gameTiles');
 		// Set map layers
-		this.towerPlaceable = this.map.createStaticLayer('towerPlace', tiles);
+		this.towerPlaceable = this.map.createDynamicLayer('towerPlace', tiles);
         this.backgroundLayer = this.map.createStaticLayer('background', tiles);
 
         // ---- Player loading ----
@@ -439,8 +469,11 @@ class LevelScene extends Phaser.Scene {
 		});
 
 		//bottom right 5 tiles used for tower placement
-		var tower = new Tower(this, this.tileSize / 2, this.mapHeight - this.tileSize/2, 'basicTower' );
-		player.towers.add(tower, true);
+		var basicTower = new Tower(this, this.tileSize / 2, this.mapHeight - this.tileSize/2, 'basicTower' );
+		player.towers.add(basicTower, true);
+		
+		var piercingTower = new Tower(this, this.tileSize /2 + this.tileSize, this.mapHeight - this.tileSize/2, 'piercingTower');
+		player.towers.add(piercingTower, true);
 
 		// ----- Projectiles -----
  		this.projectiles = this.add.group(); 
@@ -502,6 +535,7 @@ class LevelScene extends Phaser.Scene {
 		//	this.timeText.setText('');
 		//}
 	}
+	
 
 };
 // Level 1
