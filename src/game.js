@@ -71,12 +71,12 @@ class Tower extends Phaser.GameObjects.Sprite {
 		
 		//this.time = this.time.addEvent({delay: 0, repeat: 0});
 		this.timer = this.scene.time.addEvent({delay: 1, repeat: 0});
-		
+		this.purch = 0;
     }
 
 	update() {
 		if (!this.isOn){
-			if (this.cost <= this.scene.player.gold){
+			if (this.cost <= player.gold){
 				this.setAlpha(1);
 				this.marker.lineStyle(1, 0x7CFC00, 1);
 				this.marker.strokeRect(0, 0, this.scene.tileSize, this.scene.tileSize);
@@ -122,9 +122,15 @@ class Tower extends Phaser.GameObjects.Sprite {
 					});
 					gameObject.marker.setAlpha(0);
 					if (canPlace){
+						gameObject.purch++;
 						gameObject.setPosition(pointerTileX * this.scene.tileSize + this.scene.tileSize/2, pointerTileY * this.scene.tileSize + this.scene.tileSize/2);
 						gameObject.isOn = true;
-						gameObject.scene.player.gold -= gameObject.cost;
+						if (gameObject.purch == 1){
+							player.gold -= gameObject.cost;
+							var newTower = new Tower(gameObject.scene, gameObject.startPos.x, gameObject.startPos.y, gameObject.name);
+							player.towers.add(newTower,true);
+						}
+
 					} else {
 						gameObject.setPosition(gameObject.startPos.x, gameObject.startPos.y);
 						
@@ -139,7 +145,7 @@ class Tower extends Phaser.GameObjects.Sprite {
 				this.marker.strokeRect(0, 0, this.scene.tileSize, this.scene.tileSize);
 				this.marker.setAlpha(1);
 				this.setAlpha(0.5);
-				console.log(this.scene.player.gold);
+				
 			}
 		} else {
 			//projectile logic here
@@ -163,7 +169,6 @@ class Tower extends Phaser.GameObjects.Sprite {
 					this.scene.projectiles.add(projectile, true);
  					this.timer.destroy();
 					this.timer = this.scene.time.addEvent({delay: this.bullet_delay, repeat: 0}); 
-					console.log('shoot');
 				}
 
 			}
@@ -203,7 +208,6 @@ class Projectile extends Phaser.GameObjects.Sprite {
 		var dist = Math.hypot(this.y - this.target.y, this.x - this.target.x);
 		if(dist <= this.scene.tileSize/2){
 			this.target.hp -= this.damage;
-			console.log(this.target);
 			this.destroy();
 		}
     }
@@ -385,7 +389,7 @@ class LevelScene extends Phaser.Scene {
         // ---- Player loading ----
         // TODO: Test purposes only. If we implement save states, this should be refactored.
         // Calling Player(name, gold, lives, waveNum, towers, levelName) - taking defaults for most
-        this.player = new Player(null, null, null, null, this.levelName);
+        player= new Player(null, null, null, null, this.levelName);
 
         // ---- UI elements ----
         var startMenuText = this.add.text(this.sys.canvas.width - 300, this.sys.canvas.height - 100, 'Return to Menu', { fontSize: '50px', color:'#00FF00', rtl: true});
@@ -415,8 +419,8 @@ class LevelScene extends Phaser.Scene {
 
 		// ----- Towers -----
 		player.towers = this.add.group({
-            runChildUpdate: true,
-        });
+			runChildUpdate : true
+		});
 
 		//bottom right 5 tiles used for tower placement
 		var tower = new Tower(this, this.tileSize / 2, this.mapHeight - this.tileSize/2, 'basicTower' );
@@ -451,7 +455,7 @@ class LevelScene extends Phaser.Scene {
         this.enemyWaves = new EnemyWaves(this);
     }
 
-	update(time, delta) {
+	update() {
 		// Check for game over, man.
 		if (player.lives <= 0){
 			player.lives = 0;
@@ -701,6 +705,8 @@ class Player {
         var saveFileName = saveFileName || this.playerName;
         return saveFileName;
     }
+	
+
 };
 
 // ======== Global Event Listeners ========
