@@ -7,15 +7,14 @@ import css from './stylesheets/main.css'
 const enemyFuncs = require('./enemy.js') */
 
 
-
 // ======== Globals ========
 var game;
-var player = new Player();
+var player;
 var scenes = [];
 var config = {
     type: Phaser.AUTO,
     parent: 'phaser-app',
-    backgroundColor: '#F0F0F0',
+    backgroundColor: '#0F0F0F',
     width: 1344,
     height: 1096,
     pixelArt: true, // antialias: false, roundPixels: true
@@ -33,6 +32,7 @@ function windowOnLoad() {
     scenes.push(Level3Scene);
 	scenes.push(gameOver);
     // Run the game
+    player = new Player();
     game = new Phaser.Game(config);
 }
 
@@ -112,47 +112,59 @@ class Enemy extends Phaser.GameObjects.PathFollower {
 		super(scene, path, 0, 0, name);
 		this.scene = scene;
 		this.name = name;
+        this.spawnDelay = spawnDelay;
+        this.hp = 10;
+        this.bounty = 10;
+        this.setActive(false);
+        this.setVisible(false);
+        //this.setVisible(false);
         // We should not store the entire JSON in memory.
         // Instead, we should process it here, then discard of it.
         // This lets us do error checking on the JSON, rather than assume our JSON is always correct.
 		var config = this.scene.cache.json.get(this.name);
 
         // Add animation
-        this.pathVector = new Phaser.Math.Vector2();
 		var speed = config.speed || 1;
-        this.startFollow({
+        this.duration = 
+        this.pathConfig = {
             ease: 'Linear',
             duration: Math.floor(this.scene.mapWidth/speed * 800),
-            repeat: 0,
             from: 0,
             to: 1,
-            rotateToPath: true,
-            delay: spawnDelay
+            rotateToPath: true
+        };
+    }
+
+    // Sets up timers to spawn the unit
+    spawn() {
+        this.spawnTimer = this.scene.time.addEvent({
+            delay: this.spawnDelay,
+            callback: this.getOutThere,
+            callbackScope: this
         });
-		//this.scene.tweens.add({
-	    //    targets: this,
-	    //    z: 1,
-	    //    ease: 'Linear',
-	    //    duration: (Math.floor(this.scene.mapWidth/speed * 800)),
-	    //    repeat: 0,
-	    //    delay: 200*num + (i+1) * this.scene.waveDelay * 1000
-		//});
-	}
+    }
 
+    // Gets the unit out there to start doing stuff!
+    getOutThere() {
+        // Starts updating
+        this.setActive(true);
+        this.setVisible(true);
+        // Starts animating -- note that it still waits for its spawnDelay before moving.
+        this.startFollow(this.pathConfig);
+    }
 
-
-
-   update() {
-		//var t = this.z;
-		//var vec = this.getData('vector');
-		//this.scene.path.getPoint(t, vec);
-		//this.setPosition(vec.x, vec.y);
-		//this.setDepth(this.y);
+    // Starts being called after this.active == true (from setActive)
+    update(time, delta) {
+        // Check if we've been killed.
+        // If so, give player gold and get destroyed.
+        if(this.hp <= 0) {
+            player.gold += this.bounty;
+            this.destroy();
+        }
 
 		//if the enemy is past the end of the map
-		if (this.pathVector.x >= this.scene.mapWidth){
-		//if (this.specs.type == 'ground' && (vec.x == this.scene.enemy_stop.x && vec.y == this.scene.enemy_stop.y)){
-			this.scene.lives -= 1;
+		if (this.active && !this.isFollowing()) {
+			player.lives -= 1;
 			this.destroy();
 		}
     }
@@ -220,9 +232,9 @@ class gameOver extends Phaser.Scene{
         var startMenuText = this.add.text(this.sys.canvas.width - 300, this.sys.canvas.height - 100, 'Return to Menu', { fontSize: '50px', color:'#00FF00', rtl: true});
 
 		// Back to start menu button
-        var btnStart = this.add.sprite(this.sys.canvas.width - 100, this.sys.canvas.height - 100, 'blueButton').setInteractive();
-        btnStart.setDisplaySize(100,100);
-        btnStart.on('pointerdown', function(event) {
+        var menuButton = this.add.sprite(this.sys.canvas.width - 100, this.sys.canvas.height - 100, 'blueButton').setInteractive();
+        menuButton.setDisplaySize(100,100);
+        menuButton.on('pointerdown', function(event) {
             this.scene.start('startMenu');
         }, this); // Return to the start menu.
 	}
@@ -243,20 +255,6 @@ class LevelScene extends Phaser.Scene {
 
 		this.enemySpawn = { 'x': 0, 'y': 0 };
 		this.enemyGoal  = { 'x': 0, 'y': 0 };
-
-		// Wave number - can be used for save states?
-        this.waveNum = 0;
-		// Game resources for the player
-        this.lives = -1;
-        this.gold = -1;
-        // Tower arrangement - could just reference
-        this.towers = null;
-		
-		
-		//delay before next wave in seconds (default time set for first wave)
-		//TODO: CHANGE TO MORE PRACTICAL DELAY, delay is low for testing purposes
-		this.waveDelay = 5;
-		
     }
 
     preload() {
@@ -264,7 +262,6 @@ class LevelScene extends Phaser.Scene {
         this.load.image('blueButton', 'assets/images/blue_button09.png');
 		this.load.spritesheet('enemySprite', 'assets/spritesheets/towerDefense_tilesheet.png', { frameWidth: 64, frameHeight: 64} );
         this.load.image('gameTiles', 'assets/spritesheets/minimalTilesTowers.png');
-		//this.load.spritesheet('enemy_sprite', 'assets/spritesheets/towerDefense_tilesheet.png', { frameWidth: 64, frameHeight: 64} );
         this.load.tilemapTiledJSON(this.levelName, 'src/maps/' + this.levelName + '.json');
         this.load.json('waveFile' + this.levelName, this.waveFile);
 		this.load.json('normalEnemy', 'src/enemies/normalEnemy.json');
@@ -276,15 +273,25 @@ class LevelScene extends Phaser.Scene {
     }
 
     create() {
+        // If we died, lets start a new game.
+        // TODO: Test purposes only. If we implement save states, this should be refactored.
+        player = new Player();
         // ---- UI elements ----
         var startMenuText = this.add.text(this.sys.canvas.width - 300, this.sys.canvas.height - 100, 'Return to Menu', { fontSize: '50px', color:'#00FF00', rtl: true});
 
         // Back to start menu button
-        var btnStart = this.add.sprite(this.sys.canvas.width - 100, this.sys.canvas.height - 100, 'blueButton').setInteractive();
-        btnStart.setDisplaySize(100,100);
-        btnStart.on('pointerdown', function(event) {
+        var menuButton = this.add.sprite(this.sys.canvas.width - 100, this.sys.canvas.height - 100, 'blueButton').setInteractive();
+        menuButton.setDisplaySize(100,100);
+        menuButton.on('pointerdown', function(event) {
             this.scene.start('startMenu');
         }, this); // Return to the start menu.
+
+        // Button to start next wave.
+        var startWaveButton = this.add.sprite(100, this.sys.canvas.height - 100, 'blueButton').setInteractive();
+        startWaveButton.setDisplaySize(100,100);
+        startWaveButton.on('pointerdown', function(event) {
+            this.enemyWaves.startNextWave();
+        }, this);
 
 		// ---- Tilemap ----
         this.map = this.add.tilemap(this.levelName);
@@ -303,9 +310,7 @@ class LevelScene extends Phaser.Scene {
 			}, this); 
 		 */
 		
-	    
-        // ---- Graphics ----
-        this.graphics = this.add.graphics();
+	    // Add path for enemies on this level. 
 	    this.path = new Phaser.Curves.Path();
 		
 		
@@ -314,19 +319,19 @@ class LevelScene extends Phaser.Scene {
 		console.log(pathObjects);
 		for (var i = 0; i < pathObjects.length; i++){
 			if (pathObjects[i].name == 'StartPoint'){
-				this.enemy_start.x = pathObjects[i].x;
-				this.enemy_start.y = pathObjects[i].y;
-				this.path.add(new Phaser.Curves.Line([ this.enemy_start.x, this.enemy_start.y, this.enemy_start.x, this.enemy_start.y ]));
+				this.enemySpawn.x = pathObjects[i].x;
+				this.enemySpawn.y = pathObjects[i].y;
+				this.path.add(new Phaser.Curves.Line([ this.enemySpawn.x, this.enemySpawn.y, this.enemySpawn.x, this.enemySpawn.y ]));
 			} else if (pathObjects[i].name == 'FinishPoint'){
-				this.enemy_stop.x = pathObjects[i].x;
-				this.enemy_stop.y = pathObjects[i].y;
+				this.enemyGoal.x = pathObjects[i].x;
+				this.enemyGoal.y = pathObjects[i].y;
 			} else {
 				for (var j = 0; j < pathObjects[i].polyline.length; j++){
-					this.path.lineTo(pathObjects[i].polyline[j].x + this.enemy_start.x, pathObjects[i].polyline[j].y + this.enemy_start.y);
+					this.path.lineTo(pathObjects[i].polyline[j].x + this.enemySpawn.x, pathObjects[i].polyline[j].y + this.enemySpawn.y);
 				}
 			} 
 		}
-		this.path.lineTo(this.enemy_stop.x, this.enemy_stop.y);
+		this.path.lineTo(this.enemyGoal.x, this.enemyGoal.y);
 
 	    // ---- Units ----
         this.enemyWaves = new EnemyWaves(this);
@@ -341,10 +346,10 @@ class LevelScene extends Phaser.Scene {
 		this.timer = this.time.addEvent({delay: this.enemyWaves, repeat: 0});
 
 		//create text for time until next wave
-		this.timeText = this.add.text(this.mapWidth - 270, 16, 'Next Wave in ' + this.waveDelay + 's', { fontSize: '24px', fill: '#FFF' })
+		//this.timeText = this.add.text(this.mapWidth - 270, 16, 'Next Wave in ' + this.waveDelay + 's', { fontSize: '24px', fill: '#FFF' })
     }
 
-	update() {
+	update(time, delta) {
 
 		var towers = this.towers.getChildren();
 		for (var i = 0; i < towers.length; i++){
@@ -352,7 +357,6 @@ class LevelScene extends Phaser.Scene {
 		}
 
 
-		this.enemyWaves.update();
 
 		//game is lost - go to new scene
 		if (player.lives <= 0){
@@ -363,28 +367,25 @@ class LevelScene extends Phaser.Scene {
 		this.goldText.setText('Gold: ' + player.gold);
 		this.liveText.setText('Lives: ' + player.lives);
 
-		if (this.waveCount > 0){
-			this.timeText.setText('Next Wave in ' + Math.round(this.waveDelay * (1-this.timer.getProgress())) + 's')
-		} else {
-			this.timeText.setText('');
-		}
+		//if (this.waveCount > 0){
+		//	this.timeText.setText('Next Wave in ' + Math.round(this.waveDelay * (1-this.timer.getProgress())) + 's')
+		//} else {
+		//	this.timeText.setText('');
+		//}
 
 		//reset timer if necessary
- 		if (this.timer.getProgress() == 1 && this.waveCount > 1){
-			this.timer.destroy();
-			this.timer = this.time.addEvent({delay: this.waveDelay * 1000, repeat: 0});
-			this.waveCount -=1;
-		} else if (this.timer.getProgress() == 1){
-			this.timer.destroy();
-			this.timeText.setText('');
-		}
+ 		//if (this.timer.getProgress() == 1 && this.waveCount > 1){
+		//	this.timer.destroy();
+		//	this.timer = this.time.addEvent({delay: this.waveDelay * 1000, repeat: 0});
+		//	this.waveCount -=1;
+		//} else if (this.timer.getProgress() == 1){
+		//	this.timer.destroy();
+		//	this.timeText.setText('');
+		//}
 
 		if (player.lives <= 0){
 			this.scene.start('gameOver');
 		}
-
-
-
 	}
 
 };
@@ -405,18 +406,6 @@ var Level1Scene = class extends LevelScene {
 
     create() {
         super.create();
-
-
-		//create towers
-
-		/*Create towers here - add preloading of tower sprites*/
-
-
-		//Load and initiate wave information
-
-
-
-
     }
 };
 
@@ -428,7 +417,6 @@ var Level2Scene = class extends LevelScene {
 
     preload() {
         super.preload();
-		this.lives = 10;
     }
 
     create() {
@@ -444,7 +432,6 @@ var Level3Scene = class extends LevelScene {
 
     preload() {
         super.preload();
-		this.lives = 10;
     }
 
     create() {
@@ -457,7 +444,11 @@ class EnemyWaves {
     constructor(scene) {
         this.scene = scene;
         this.waves = []
-        this.currentWave = 0; // We always start at wave index 0.
+        this.waveComplete = false; // Can only start new waves when this is false.
+        this.currentWave = 0;
+        this.waveCount = 0;
+        this.activeEnemies = null;
+        this.allWavesStarted = false;
         // The scene provides a JSON waveFile we use to generate waves
         var waveFileJSON = this.scene.cache.json.get('waveFile' + this.scene.levelName);
         this.generateWaves(waveFileJSON);
@@ -481,77 +472,96 @@ class EnemyWaves {
         //      ]
         //   ]
         //   numEnemies: Number }
-        for (var i = 0; i < waveFileJSON.waves.length; i++) {
-            // Create a group for our wave
+        this.waveCount = waveFileJSON.waves.length;
+        var enemyTypes = waveFileJSON.enemies;
+        for (let i = 0; i < this.waveCount; i++) {
+            // Object to track all data about the wave - Could be turned into its own class maybe?
 			var wave = {
                 enemies: this.scene.add.group(),
-
-            }
-            this.waves.push(wave.enemies);
-            var currentWave = waveFileJSON.waves[i];
-
-			//time between waves in seconds (low just for testing, should be incorporated into level scene)
-			var timeBetweenWaves = 5;
-
+                enemyCount: 0, // Keeps track of the total number of enemies spawned by this wave.
+                delay: 0 // Accumulates as enemies are spawned. After this many ms, all enemies in this wave should be spawned.
+            };
+            this.waves.push(wave);
+            var enemyGroups = waveFileJSON.waves[i];
             // Loop through each enemy type.
-            for (var j = 0; j < currentWave.length; j++) {
-                // TODO: handle enemyType property
-                // TODO: handle enemyProps property
-                // TODO: handle enemyCount property
-                // TODO: handle spawnDelay property
-                // TODO: handle spawnSpread property
-                // TODO: generate enemies, put them into the wave
-				// Added on master
-				for (var n = 0; n < currentWave[j].enemyCount; n++){
-						var enemy = new Enemy(this.scene, this.scene.enemy_start.x, this.scene.enemy_start.y, currentWave[j].enemyType);
-						enemy.loadEnemy();
-						wave.add(enemy, true);
-						//game object functions: https://photonstorm.github.io/phaser3-docs/Phaser.GameObjects.GameObject.html#setData__anchor
-						enemy.setData('vector', new Phaser.Math.Vector2());
-						var speed = enemy.specs.speed;
-						//define animation
-						
-						if (enemy.specs.type == 'ground'){
-							this.scene.tweens.add({
-							//can use conditional in update to change path if unit is flying
-								targets: enemy,
-								z: 1,
-								ease: 'Linear',
-								duration: (Math.floor(this.scene.map_width/speed * 800)),
-								repeat: 0,
-								delay: 200*num + (i+1) * this.scene.waveDelay * 1000
-								
-							});
-						} else {
-							console.log('add air enemy');
-						}
-					num++;
-				}
-                // Mine is below
-				for (var n = 0; n < currentWave[j].enemyCount; n++){
-                    var delay = 200*i + (i+1) * this.scene.waveDelay * 1000;
-					var enemy = new Enemy(this.scene, this.scene.path, currentWave[j].enemyType, delay);
-					wave.add(enemy, true);
-					//game object functions: https://photonstorm.github.io/phaser3-docs/Phaser.GameObjects.GameObject.html#setData__anchor
+            for (let j = 0; j < enemyGroups.length; j++) {
+                var enemyCount = enemyGroups[j].enemyCount || 1;
+
+                // Enemies of this type spawn 1000 ms (1s) apart by default
+                var spawnSpread = enemyGroups[j].spawnSpread || 1000;
+
+                // These enemies spawns 1000 ms (1s) after the previous group, by default.
+                var spawnDelay = enemyGroups[j].spawnDelay || 0;
+
+                // Must provide an enemyType so we know what type of enemy to spawn.
+                var enemyType = enemyGroups[j].enemyType || console.log("Error in JSON, must supply enemyType");
+
+                // TODO: Implement this override functionality. Potential design:
+                // Add stuff to Enemy class to handle this 'enemyProps' object.
+                // If it's set, then check that for values before checking the config file.
+                // - OR -
+                // Somehow agglomerate the objects into one. Could be useful to write a function that takes
+                // two objects representing an enemy config and combines them into one (first arg preceding the second).
+                var enemyProps = null;
+                if(enemyTypes[enemyType]) {
+                    enemyProps = enemyTypes[enemyType].enemyProps || null;
+                    // Now that we've consume the original type, we set it to an alternate one for use
+                    enemyType = enemyTypes[enemyType].altType || enemyType;
+                }
+
+                wave.delay += spawnDelay;
+				for (let n = 0; n < enemyCount; n++){
+					let enemy = new Enemy(this.scene, this.scene.path, enemyType, wave.delay);
+					wave.enemies.add(enemy, true);
+                    wave.enemyCount++;
+                    wave.delay += spawnSpread;
 				}
             }
-			this.scene.waveCount = this.waves.length;
         }
     }
 
-    update() {
-        // This currently calls update() on every single enemy. Could be changed to just update the current wave.
-		this.scene.graphics.clear();
-
-		this.scene.graphics.lineStyle(0, 0, 0);
-		this.scene.path.draw(this.scene.graphics);
-        for (var i = 0; i < this.waves.length; i++) {
-            var enemies = this.waves[i].getChildren();
-            for (var j = 0; j < enemies.length; j++) {
-				enemies[j].update();
-
-            }
+    // Starts the next wave, if the current wave is not in progress
+    startNextWave() {
+        // Check if the current wave is in progress.
+        if(this.isWaveActive()) {
+            console.log("Cannot start next wave, current wave is in progress");
+            return;
         }
+        // To be extra safe 
+        if(this.currentWave >= this.waveCount || this.allWavesStarted) {
+            console.log("No more waves to start!");
+            this.allWavesStarted = true;
+            return;
+        } else {
+            console.log("Starting wave " + this.currentWave);
+            this.startWave(this.currentWave);
+            this.currentWave++;
+            if(this.currentWave >= this.waveCount) {
+                this.allWavesStarted = true;
+            }
+            return this.currentWave;
+        }
+    }
+
+    // Simply starts a wave, assigning it as the active wave.
+    startWave(waveNum) {
+        this.activeEnemies = this.waves[waveNum].enemies.getChildren();
+        // Starts calling update() for enemies.
+        this.waves[waveNum].enemies.runChildUpdate = true;
+        for(var i = 0; i < this.activeEnemies.length; ++i) {
+            this.activeEnemies[i].spawn();
+        }
+    }
+    
+    isWaveActive() {
+        if(!this.activeEnemies) {
+            return 0;
+        }
+        if(this.activeEnemies.length <= 0) {
+            return 0;
+        }
+        console.log("Active Enemy count: " + this.activeEnemies.length);
+        return this.activeEnemies.length;
     }
 };
 
@@ -574,7 +584,8 @@ class Player {
 
     }
 
-    // TODO: Implement save states, replacing placeholder function.
+    // TODO: Implement this function to load save states
+    //       May want to also add a function to save player data?
     loadSaveData() {
         // Could add parameters, or use globals
         // We should be able to use localStorage for save states, but have to be careful of

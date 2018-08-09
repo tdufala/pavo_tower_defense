@@ -1,35 +1,40 @@
-{ "waves":[
- [
-            {	
-				"enemyType": "normalEnemy",
-				"enemyProps": {},
-                "enemyCount": 1,
-                "spawnDelay": 0,
-                "spawnSpread": 0
-            }, {
-                "enemyType": "scaryEnemy",
-                "enemyProps": {
-                },
-                "enemyCount": 1, 
-                "spawnDelay": 0, 
-                "spawnSpread": 0 
-            }
-        ], [ 
-            {
-                "enemyType": "normalEnemy",
-                "enemyProps": {
-                },
-                "enemyCount": 10,
-                "spawnDelay": 0,
-                "spawnSpread": 0 
-            }, {
-                "enemyType": "scaryEnemy",
-                "enemyProps": {
-                    
-                },
-                "enemyCount": 1, 
-                "spawnDelay": 30, 
-                "spawnSpread": 0 
-            }
-        ]
+// spawnDelay - time in milliseconds from start of wave to spawn an enemy
+// spawnSpread - time in milliseconds between spawning enemies, for enemyCount > 1
+// enemyCount - number of enemies to spawn
+// enemyType - name which maps to an enemy JSON file used to load properties
+// enemyProps - object used to override what is set in the Enemy JSON file
+{
+"enemies": [
+    "normalEnemy": {},
+    
+    "scaryEnemy": {
+        "altType": "normalEnemy",
+        "enemyProps": {
+            "health": 1000
+        },
+    },
+],
+"waves": [
+    [ // Wave 1
+        {
+            "enemyType": "normalEnemy"
+        }, {
+            "enemyType": "scaryEnemy"
+        }, {
+            "enemyType": "normalEnemy",
+            "enemyCount": 2
+        }
+    ], [  // Wave 2
+        {
+            "enemyType": "normalEnemy"
+        }, {
+            "enemyType": "scaryEnemy"
+        }, {
+            "enemyType": "normalEnemy",
+            "enemyCount": 5,
+            "spawnSpread": 500,
+            "spawnDelay": 5000
+        }
+        
+    ]
 ]}

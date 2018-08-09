@@ -1,35 +1,33 @@
-{ "waves":[
- [
-            {	
-				"enemyType": "normalEnemy",
-				"enemyProps": {},
-                "enemyCount": 1,
-                "spawnDelay": 0,
-                "spawnSpread": 0
-            }, {
-                "enemyType": "scaryEnemy",
-                "enemyProps": {
-                },
-                "enemyCount": 1, 
-                "spawnDelay": 0, 
-                "spawnSpread": 0 
-            }
-        ], [ 
-            {
-                "enemyType": "normalEnemy",
-                "enemyProps": {
-                },
-                "enemyCount": 10,
-                "spawnDelay": 0,
-                "spawnSpread": 0 
-            }, {
-                "enemyType": "scaryEnemy",
-                "enemyProps": {
-                    
-                },
-                "enemyCount": 1, 
-                "spawnDelay": 30, 
-                "spawnSpread": 0 
-            }
-        ]
+{
+"enemies": {
+    "bigNormalEnemy": {
+        "altType": "normalEnemy",
+        "enemyProps": {
+            "health": 1000
+        }
+    }
+},
+"waves": [
+    [
+        {
+            "enemyType": "normalEnemy"
+        }, {
+            "enemyType": "scaryEnemy"
+        }, {
+            "enemyType": "normalEnemy",
+            "enemyCount": 2
+        }
+    ], [
+        {
+            "enemyType": "normalEnemy"
+        }, {
+            "enemyType": "scaryEnemy"
+        }, {
+            "enemyType": "normalEnemy",
+            "enemyCount": 5,
+            "spawnSpread": 500,
+            "spawnDelay": 5000
+        }
+        
+    ]
 ]}
