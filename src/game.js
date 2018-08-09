@@ -149,7 +149,7 @@ class Tower extends Phaser.GameObjects.Sprite {
 			var enemies = this.scene.enemyWaves.activeEnemies;
 			
 			if (enemies){
-				var nearestEnemy = {'index' : null, 'dist' : -1};
+				var nearestEnemy = {'index' : null, 'dist' : 1000};
 				for (var i = 0; i < enemies.length; i++){
 					var dist = Math.hypot(enemies[i].x - this.x, enemies[i].y - this.y);
 					if (!nearestEnemy.index || nearestEnemy.dist > dist){
@@ -163,6 +163,7 @@ class Tower extends Phaser.GameObjects.Sprite {
 					this.scene.projectiles.add(projectile, true);
  					this.timer.destroy();
 					this.timer = this.scene.time.addEvent({delay: this.bullet_delay, repeat: 0}); 
+					console.log('shoot');
 				}
 
 			}
@@ -189,8 +190,10 @@ class Projectile extends Phaser.GameObjects.Sprite {
 
     update() {
 		var angle = Math.atan((this.y - this.target.y) / (this.x - this.target.x));
-        this.y -= this.speed * Math.sin(angle);
-        this.x -= this.speed * Math.cos(angle);
+		var factor = 1;
+		if (this.x < this.target.x) factor = -1;
+        this.y -= this.speed * Math.sin(angle)* factor;
+        this.x -= this.speed * Math.cos(angle) * factor;
 
         if (this.y < -50) {
             this.setActive(false);
