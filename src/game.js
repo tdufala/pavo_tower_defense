@@ -43,48 +43,132 @@ class Tower extends Phaser.GameObjects.Sprite {
         super(scene, x, y, name);
 		this.scene = scene;
 		this.name = name;
+		
 		this.isDraggable = false;
+
         // Read data from config file.
         var config = this.scene.cache.json.get(this.name);
         // Default cost of 0
         this.cost = config.cost || 0;
+		
+		//used to return tower to starting position if placed in invalid location
 		this.startPos = {'x': x, 'y': y};
+		
+		//projectile to use for this tower
+		this.projectile = config.projectile;
+		
+		//marker used for tower
+		this.marker = this.scene.add.graphics();
+		
+		//active represents whether or not the tower is searching for enemies
+		this.isOn = false;
+		
+		//radius to look for enemies
+		this.radius = config.radius;
+		
+		//time to wait between shots
+		this.bullet_delay = config.bullet_delay;
+		
+		//this.time = this.time.addEvent({delay: 0, repeat: 0});
+		this.timer = this.scene.time.addEvent({delay: 1, repeat: 0});
+		
     }
 
 	update() {
-		if (!this.isDraggable){
-			this.setInteractive();
-			this.scene.input.setDraggable(this);
-			this.isDraggable = true;
-			this.scene.input.on('dragstart', function (pointer, gameObject) {
-            	gameObject.setAlpha(0.5);
-			});
-			this.scene.input.on('drag', function (pointer, gameObject, dragX, dragY) {
-				gameObject.setPosition(dragX, dragY);
-			});
-			this.scene.input.on('dragend', function(pointer, gameObject) {
-				gameObject.setAlpha(1);
-				// Snap to tile coordinates, but in world space
-				var pointerTileX = this.scene.map.worldToTileX(pointer.x);
-				var pointerTileY = this.scene.map.worldToTileY(pointer.y);
-				var canPlace = false;
-				this.scene.towerPlaceable.findTile(function(tile){
-					if (tile.x == pointerTileX && tile.y == pointerTileY){
-						if (tile.index == 1){
-							canPlace = true;
+		if (!this.isOn){
+			if (this.cost <= this.scene.player.gold){
+				this.setAlpha(1);
+				this.marker.lineStyle(1, 0x7CFC00, 1);
+				this.marker.strokeRect(0, 0, this.scene.tileSize, this.scene.tileSize);
+				this.marker.setAlpha(0);
+				this.setInteractive();
+				this.scene.input.setDraggable(this);
+				this.isDraggable = true;
+				this.scene.input.on('dragstart', function (pointer, gameObject) {
+					gameObject.setAlpha(0.5);
+				});
+				this.scene.input.on('drag', function (pointer, gameObject, dragX, dragY) {
+					gameObject.setPosition(dragX, dragY);
+					var pointerTileX = this.scene.map.worldToTileX(pointer.x);
+					var pointerTileY = this.scene.map.worldToTileY(pointer.y);
+					var canPlace = false;
+ 					this.scene.towerPlaceable.findTile(function(tile){
+						if (tile.x == pointerTileX && tile.y == pointerTileY){
+							if (tile.index == 1){
+								canPlace = true;
+							}
+							return true;
 						}
-						return true;
+					}); 
+					if (canPlace){
+						gameObject.marker.setAlpha(1);
+						gameObject.marker.x = this.scene.map.tileToWorldX(pointerTileX);
+						gameObject.marker.y = this.scene.map.tileToWorldY(pointerTileY);
 					}
 				});
-				if (canPlace){
-					gameObject.setPosition(pointerTileX * this.scene.tileSize + this.scene.tileSize/2, pointerTileY * this.scene.tileSize + this.scene.tileSize/2);
-				} else {
-					gameObject.setPosition(gameObject.startPos.x, gameObject.startPos.y);
+				this.scene.input.on('dragend', function(pointer, gameObject) {
+					gameObject.setAlpha(1);
+					// Snap to tile coordinates, but in world space
+					var pointerTileX = this.scene.map.worldToTileX(pointer.x);
+					var pointerTileY = this.scene.map.worldToTileY(pointer.y);
+					var canPlace = false;
+					this.scene.towerPlaceable.findTile(function(tile){
+						if (tile.x == pointerTileX && tile.y == pointerTileY){
+							if (tile.index == 1){
+								canPlace = true;
+							}
+							return true;
+						}
+					});
+					gameObject.marker.setAlpha(0);
+					if (canPlace){
+						gameObject.setPosition(pointerTileX * this.scene.tileSize + this.scene.tileSize/2, pointerTileY * this.scene.tileSize + this.scene.tileSize/2);
+						gameObject.isOn = true;
+						gameObject.scene.player.gold -= gameObject.cost;
+					} else {
+						gameObject.setPosition(gameObject.startPos.x, gameObject.startPos.y);
+						
+					}
+				});
+			}	else {
+				var pointerTileX = this.scene.map.worldToTileX(this.x);
+				var pointerTileY = this.scene.map.worldToTileY(this.y);
+				this.marker.x = this.scene.map.tileToWorldX(pointerTileX);
+				this.marker.y = this.scene.map.tileToWorldY(pointerTileY);
+				this.marker.lineStyle(1, 0xFF0000, 1);
+				this.marker.strokeRect(0, 0, this.scene.tileSize, this.scene.tileSize);
+				this.marker.setAlpha(1);
+				this.setAlpha(0.5);
+				console.log(this.scene.player.gold);
+			}
+		} else {
+			//projectile logic here
+			
+			
+			//get nearest enemy (if there are any)
+			var enemies = this.scene.enemyWaves.activeEnemies;
+			
+			if (enemies){
+				var nearestEnemy = {'index' : null, 'dist' : -1};
+				for (var i = 0; i < enemies.length; i++){
+					var dist = Math.hypot(enemies[i].x - this.x, enemies[i].y - this.y);
+					if (!nearestEnemy.index || nearestEnemy.dist > dist){
+						nearestEnemy.index = i;
+						nearestEnemy.dist = dist;
+					} 
 				}
-			});
-		}
-	}
+				//if nearest enemy is within detection radius, shoot
+				if (nearestEnemy.dist <= this.radius  && this.timer.getProgress() == 1 ){
+					var projectile = new Projectile(this.scene, this.x, this.y, this.projectile, null, enemies[nearestEnemy.index]);
+					this.scene.projectiles.add(projectile, true);
+ 					this.timer.destroy();
+					this.timer = this.scene.time.addEvent({delay: this.bullet_delay, repeat: 0}); 
+				}
 
+			}
+		}
+	
+	}
 
 };
 
@@ -92,25 +176,33 @@ class Tower extends Phaser.GameObjects.Sprite {
 // Based on http://www.html5gamedevs.com/topic/36169-rotate-bullets-position-in-rotation-of-gun/
 // TODO: Implement this according to what makes sense for us.
 class Projectile extends Phaser.GameObjects.Sprite {
-    constructor(scene, x, y, name) {
+    constructor(scene, x, y, name, damage, target) {
         super(scene, x, y, name);
-        this.speed = 0;
+		var config = scene.cache.json.get(name);
+        this.speed = config.speed;
+		this.scene = scene;
+		this.damage = damage || config.damage;
+		this.target = target;
+
     }
 
-    fire(x, y) {
-        this.setPosition(x, y);
-        this.setActive(true);
-        this.setVisible(true);
-    }
 
-    update(time, delta) {
-        this.y -= this.speed * delta;
-        this.x -= this.speed * delta;
+    update() {
+		var angle = Math.atan((this.y - this.target.y) / (this.x - this.target.x));
+        this.y -= this.speed * Math.sin(angle);
+        this.x -= this.speed * Math.cos(angle);
 
         if (this.y < -50) {
             this.setActive(false);
             this.setVisible(false);
         }
+		
+		var dist = Math.hypot(this.y - this.target.y, this.x - this.target.x);
+		if(dist <= this.scene.tileSize/2){
+			this.target.hp -= this.damage;
+			console.log(this.target);
+			this.destroy();
+		}
     }
 };
 
@@ -120,16 +212,13 @@ class Enemy extends Phaser.GameObjects.PathFollower {
 		super(scene, path, 0, 0, name);
 		this.scene = scene;
 		this.name = name;
+		var config = this.scene.cache.json.get(this.name);
         this.spawnDelay = spawnDelay;
-        this.hp = 10;
-        this.bounty = 10;
+        this.hp = config.hp;
+        this.bounty = config.bounty;
         this.setActive(false);
         this.setVisible(false);
-        //this.setVisible(false);
-        // We should not store the entire JSON in memory.
-        // Instead, we should process it here, then discard of it.
-        // This lets us do error checking on the JSON, rather than assume our JSON is always correct.
-		var config = this.scene.cache.json.get(this.name);
+
 
         // Add animation
 		var speed = config.speed || 1;
@@ -159,11 +248,11 @@ class Enemy extends Phaser.GameObjects.PathFollower {
         this.setActive(true);
         this.setVisible(true);
         // Starts animating -- note that it still waits for its spawnDelay before moving.
-        this.startFollow(this.pathConfig);
+        this.startFollow(this.pathConfig, false, 1, 1);
     }
 
     // Starts being called after this.active == true (from setActive)
-    update(time, delta) {
+    update() {
         // Check if we've been killed.
         // If so, give player gold and get destroyed.
         if(this.hp <= 0) {
@@ -260,6 +349,7 @@ class LevelScene extends Phaser.Scene {
         this.tileSize = 64;
         this.waveFile = 'src/waves/' + this.levelName + '.json';
         this.enemyWaves = null;
+		this.projectiles = null;
 
 		this.enemySpawn = { 'x': 0, 'y': 0 };
 		this.enemyGoal  = { 'x': 0, 'y': 0 };
@@ -277,6 +367,8 @@ class LevelScene extends Phaser.Scene {
 		this.load.image('scaryEnemy', 'assets/images/scaryEnemy.png');
 		this.load.json('basicTower', 'src/towers/basicTower.json');
 		this.load.image('basicTower', 'assets/images/basicTower.png');
+		this.load.json('basicProjectile', 'src/projectiles/basicProjectile.json');
+		this.load.image('basicProjectile', 'assets/images/basicProjectile.png');
     }
 
     create() {
@@ -290,7 +382,7 @@ class LevelScene extends Phaser.Scene {
         // ---- Player loading ----
         // TODO: Test purposes only. If we implement save states, this should be refactored.
         // Calling Player(name, gold, lives, waveNum, towers, levelName) - taking defaults for most
-        player = new Player(null, null, null, null, this.levelName);
+        this.player = new Player(null, null, null, null, this.levelName);
 
         // ---- UI elements ----
         var startMenuText = this.add.text(this.sys.canvas.width - 300, this.sys.canvas.height - 100, 'Return to Menu', { fontSize: '50px', color:'#00FF00', rtl: true});
@@ -327,6 +419,10 @@ class LevelScene extends Phaser.Scene {
 		var tower = new Tower(this, this.tileSize / 2, this.mapHeight - this.tileSize/2, 'basicTower' );
 		player.towers.add(tower, true);
 
+		// ----- Projectiles -----
+ 		this.projectiles = this.add.group(); 
+		
+		
 	    // Add path for enemies on this level.
 	    this.path = new Phaser.Curves.Path();
 
@@ -361,6 +457,11 @@ class LevelScene extends Phaser.Scene {
 
 		this.liveText.setText('Lives: ' + player.lives);
 		this.goldText.setText('Gold: ' + player.gold);
+		
+		var proj = this.projectiles.getChildren();
+		proj.forEach(function (projectile){
+			projectile.update();
+		});
 
 		//if (this.waveCount > 0){
 		//	this.timeText.setText('Next Wave in ' + Math.round(this.waveDelay * (1-this.timer.getProgress())) + 's')
@@ -385,10 +486,12 @@ var Level1Scene = class extends LevelScene {
     constructor() {
         super('level1');
 		// Constants specific to this level
-		this.enemySpawn = {'x': -2 * this.tileSize.x,
+		
+		//don't need this anymore since all data is loaded from map file
+/* 		this.enemySpawn = {'x': -2 * this.tileSize.x,
                                    'y': 18 * this.tileSize.y};
 		this.enemyGoal  = {'x': this.mapWidth + 2 * this.tileSize.x,
-                                   'y': 10 * this.tileSize.y};
+                                   'y': 10 * this.tileSize.y}; */
     }
 
     preload() {
@@ -555,6 +658,9 @@ class EnemyWaves {
         console.log("Active Enemy count: " + this.activeEnemies.length);
         return this.activeEnemies.length;
     }
+	
+
+
 };
 
 // ========= Player class ========
@@ -566,7 +672,7 @@ class Player {
     constructor(name, gold, lives, waveNum, towers, levelName) {
         // Lets us pass in a player name later if we wanted to create a leaderboard for instance
         this.playerName = name || "Player 1";
-		this.gold = gold || 500;
+		this.gold = gold || 100;
 		this.lives = lives || 10;
 
 		// Wave number - can be used for save states?

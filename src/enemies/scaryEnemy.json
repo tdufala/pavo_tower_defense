@@ -3,5 +3,6 @@
 	"type": "ground",
 	"hp": 100,
 	"skills": {},	
-	"speed": 100
+	"speed": 100,
+	"bounty" : 10
 }
