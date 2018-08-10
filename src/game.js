@@ -863,6 +863,13 @@ class Player {
         // String representing the level the player is on - can be used for save states?
         this.levelName = levelName || null;
 
+        var saveObject ={
+            gold: this.gold;
+            lives: this.lives;
+            waveNum: this.waveNum;
+            towers: this.towers;
+            levelName: this.levelName;
+        }
     }
 
     // TODO: Implement this function to load save states
@@ -871,13 +878,27 @@ class Player {
         // Could add parameters, or use globals
         // We should be able to use localStorage for save states, but have to be careful of
         // running the game in multiple tabs causing race conditions (leading to corruption) when we write to storage.
+
+	if (saveFileName === undefined){
+            saveFileName = 'default'
+        }
+
+        localStorage.getItem("save-" + saveFileName);
+
     }
     saveGame(saveFileName) {
         // If no saveFileName provided, use player name?
         // Use caution since these save files also track which level we're on.
         // Might need different save files for each level, with different file names for each?
-        var saveFileName = saveFileName || this.name;
-        return saveFileName;
+      
+	if (saveFileName === undefined){
+            saveFileName = 'default';
+        }
+
+        localStorage.setItem("save-" + saveFileName, JSON.stringify(saveObject));
+
+	// var saveFileName = saveFileName || this.name;
+       // return saveFileName;
     }
 
 
