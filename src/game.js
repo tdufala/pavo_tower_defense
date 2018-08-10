@@ -316,6 +316,9 @@ class Projectile extends Phaser.GameObjects.Sprite {
 };
 
 // ======== Enemy Units ========
+let greenColor = new Phaser.Display.Color(0,255,0);
+let yellowColor = new Phaser.Display.Color(255,255,0);
+let redColor = new Phaser.Display.Color(255,0,0);
 class Enemy extends Phaser.GameObjects.PathFollower {
 	constructor(scene, path, name, spawnDelay, props){
 		super(scene, path, -Infinity, -Infinity, name);
@@ -323,7 +326,8 @@ class Enemy extends Phaser.GameObjects.PathFollower {
 		this.name = name;
 
         // Read config vars
-        var config = this.scene.cache.json.get(this.name);
+        // We do this to do a shallow clone.
+        let config = Object.assign({}, this.scene.cache.json.get(this.name));
         Object.assign(config, props);
         this.spawnDelay = spawnDelay;
 		this.totalHP = config.hp || 1;
@@ -334,10 +338,11 @@ class Enemy extends Phaser.GameObjects.PathFollower {
         this.setActive(false);
         this.setVisible(false);
 		this.hpBar = this.scene.add.graphics();
-        this.fullHPColor = new Phaser.Display.Color(0,255,0); /* Green */
-        this.halfHPColor = new Phaser.Display.Color(255,255,0); /* Yellow */
-        this.noHPColor = new Phaser.Display.Color(255,0,0); /* Red */
+        this.fullHPColor = greenColor;
+        this.halfHPColor = yellowColor;
+        this.noHPColor = redColor;
         this.currentHPColor = this.fullHPColor;
+        this.currentHPColorString = Phaser.Display.Color.RGBToString(Math.floor(this.currentHPColor.r), Math.floor(this.currentHPColor.g), Math.floor(this.currentHPColor.b), 1, "0x");
 
         // Add animation
 		this.speed = config.speed || 1;
@@ -370,9 +375,10 @@ class Enemy extends Phaser.GameObjects.PathFollower {
         // Starts updating
         this.setActive(true);
         this.setVisible(true);
-		this.hpText = new Text(this.scene, 0,0, this.hp, { fontSize: '14pt' });
         // Start in the correct position - must be done after startFollow()
         this.setPosition(this.path.getStartPoint());
+		this.hpText = new Text(this.scene, this.width/2, this.y + this.height/2 - 17, this.hp, { fontSize: '14pt' });
+        this.hpText.setColor(Phaser.Display.Color.RGBToString(Math.floor(this.currentHPColor.r), Math.floor(this.currentHPColor.g), Math.floor(this.currentHPColor.b), 1, "#"));
     }
 
     // Starts being called after this.active == true (from setActive)
@@ -398,6 +404,7 @@ class Enemy extends Phaser.GameObjects.PathFollower {
 		}
 
         // Avoid needless computation by tracking HP since last update
+
         if(this.lastHP != this.hp) {
             this.lastHP = this.hp;
 		    this.hpText.setText(this.hp);
@@ -408,14 +415,15 @@ class Enemy extends Phaser.GameObjects.PathFollower {
             } else {
                 this.currentHPColor = Phaser.Display.Color.Interpolate.ColorWithColor(this.noHPColor, this.halfHPColor, 500, Math.floor(this.percentHP * 1000));
             }
+            this.currentHPColorString = Phaser.Display.Color.RGBToString(Math.floor(this.currentHPColor.r), Math.floor(this.currentHPColor.g), Math.floor(this.currentHPColor.b), 1, "0x");
+            this.hpText.setColor(Phaser.Display.Color.RGBToString(Math.floor(this.currentHPColor.r), Math.floor(this.currentHPColor.g), Math.floor(this.currentHPColor.b), 1, "#"));
         }
-        var currentHPColorString = Phaser.Display.Color.RGBToString(Math.floor(this.currentHPColor.r), Math.floor(this.currentHPColor.g), Math.floor(this.currentHPColor.b), 1, "0x");
 		this.hpBar.clear();
 		this.hpBar.lineStyle(1, 0x000000, 0); /* Borderless */
-		this.hpBar.fillStyle(currentHPColorString);
-		this.hpBar.fillRect(this.x - this.width/2, this.y + this.height/2 - 2, this.width * this.percentHP, 1);
-		this.hpBar.strokeRect(this.x - this.width/2, this.y + this.height/2 - 2, this.width, 1);
-		this.hpText.setPosition(this.x - this.width/2, this.y + this.height/2 - 16);
+		this.hpBar.fillStyle(this.currentHPColorString);
+		this.hpBar.fillRect(this.x - this.width/2, this.y + this.height/2 - 4, this.width * this.percentHP, 1);
+		this.hpBar.strokeRect(this.x - this.width/2, this.y + this.height/2 - 4, this.width, 1);
+		this.hpText.setPosition(this.x - this.width/2, this.y + this.height/2 - 6 - this.hpText.displayHeight);
 
     }
 };
@@ -495,9 +503,10 @@ var victoryScene = class extends Phaser.Scene {
         this.load.image('defaultButton', 'assets/images/blue_button09.png');
     }
     create() {
-        var youWinText = new Text(this, canvasAnchors.middle.x, canvasAnchors.middle.y, "You win", normalFont);
-        var finalGoldText = new Text(this, canvasAnchors.middle.x, canvasAnchors.middle.y+100, "Final Gold: " + player.gold, normalFont);
-        var finalLifeText = new Text(this, canvasAnchors.middle.x, canvasAnchors.middle.y+200, "Final Lives: " + player.lives, normalFont);
+        var youWinText = new Text(this, canvasAnchors.middle.x, canvasAnchors.middle.y - 200, "You win", normalFont);
+        youWinText.setPosition(youWinText.x - youWinText.displayWidth, youWinText.y - youWinText.displayHeight);
+        var finalGoldText = new Text(this, youWinText.x, youWinText.y + 100, "Final Gold: " + player.gold, normalFont);
+        var finalLifeText = new Text(this, youWinText.x, youWinText.y + 200, "Final Lives: " + player.lives, normalFont);
     }
 };
 
@@ -550,7 +559,7 @@ class LevelScene extends Phaser.Scene {
 		// Set map layers
 		this.towerPlaceable = this.map.createDynamicLayer('towerPlace', tiles);
         this.backgroundLayer = this.map.createStaticLayer('background', tiles);
-        
+
 
         // ---- Player loading ----
         // TODO: Test purposes only. If we implement save states, this should be refactored.
@@ -744,16 +753,16 @@ class EnemyWaves {
             var enemyGroups = waveFileJSON.waves[i];
             // Loop through each enemy type.
             for (let j = 0; j < enemyGroups.length; j++) {
-                var enemyCount = enemyGroups[j].enemyCount || 1;
+                let enemyCount = enemyGroups[j].enemyCount || 1;
 
                 // Enemies of this type spawn 1000 ms (1s) apart by default
-                var spawnSpread = enemyGroups[j].spawnSpread || 1000;
+                let spawnSpread = enemyGroups[j].spawnSpread || 1000;
 
                 // These enemies spawns 1000 ms (1s) after the previous group, by default.
-                var spawnDelay = enemyGroups[j].spawnDelay || 0;
+                let spawnDelay = enemyGroups[j].spawnDelay || 0;
 
                 // Must provide an enemyType so we know what type of enemy to spawn.
-                var enemyType = enemyGroups[j].enemyType || console.log("Error in JSON, must supply enemyType");
+                let enemyType = enemyGroups[j].enemyType || console.log("Error in JSON, must supply enemyType");
 
                 // TODO: Implement this override functionality. Potential design:
                 // Add stuff to Enemy class to handle this 'enemyProps' object.
@@ -761,7 +770,7 @@ class EnemyWaves {
                 // - OR -
                 // Somehow agglomerate the objects into one. Could be useful to write a function that takes
                 // two objects representing an enemy config and combines them into one (first arg preceding the second).
-                var enemyProps = {};
+                let enemyProps = {};
                 if(enemyTypes[enemyType]) {
                     enemyProps = enemyTypes[enemyType].enemyProps || {};
                     // Now that we've consume the original type, we set it to an alternate one for use
