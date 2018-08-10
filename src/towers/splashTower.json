@@ -1,0 +1,8 @@
+{
+	"name" : "splashTower",
+	"cost" : 50,
+	"bullet_delay": 2000,
+	"projectile" : "splashProjectile",
+	"radius" : 300,
+	"damage" : 50  
+}
