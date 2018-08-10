@@ -20,6 +20,30 @@ var config = {
     scene: scenes
 };
 
+// Used for some positioning
+var menuBarSize = {
+    x: config.width,
+    y: 200
+}
+var menuAnchors = {
+    topLeft: {
+        x: 0,
+        y: config.height - menuBarSize.y
+    },
+    topRight: {
+        x: menuBarSize.x,
+        y: config.height - menuBarSize.y
+    },
+    bottomLeft: {
+        x: 0,
+        y: config.height
+    },
+    bottomRight: {
+        x: config.width,
+        y: config.height
+    }
+}
+
 
 // Code to set up game on initial load
 function windowOnLoad() {
@@ -253,7 +277,7 @@ class Enemy extends Phaser.GameObjects.PathFollower {
         this.setActive(false);
         this.setVisible(false);
 		this.hpBar = this.scene.add.graphics();
-		this.hpText = this.scene.add.text(0,0, '', { fontSize: '10px', fill: '#FFF' });
+		this.hpText = new Text(scene, 0,0, '', { fontSize: '10px', fill: '#FFF' });
         this.fullHPColor = new Phaser.Display.Color(0,255,0); /* Green */
         this.halfHPColor = new Phaser.Display.Color(255,255,0); /* Yellow */
         this.noHPColor = new Phaser.Display.Color(255,0,0); /* Red */
@@ -352,20 +376,22 @@ var StartMenuScene = class extends Phaser.Scene {
         this.load.image('blueButton', 'assets/images/blue_button09.png');
         this.load.image('blueCircle', 'assets/images/blue_circle.png');
         this.load.image('greenCircle', 'assets/images/green_circle.png');
+        // A hack to load a custom font. wacky...
+        this.add.text(-Infinity, -Infinity, "Loading Visitor Font...", {font:"1px Visitor", fill: "#FFFFFF"}).destroy();
 
     }
 
     create() {
-        var startMenuText = this.add.text(75, 75, 'Start Menu', { fontFamily: 'Helvetica, Arial', fontSize: '100px', color:'#0000FF'});
-        var level1Text = this.add.text(75, 200, 'Level 1', { fontFamily: 'Helvetica, Arial', fontSize: '50px', color:'#00FF00' });
-        var level2Text = this.add.text(75, 300, 'Level 2', { fontFamily: 'Helvetica, Arial', fontSize: '50px', color:'#00FF00' });
-        var level3Text = this.add.text(75, 400, 'Level 3', { fontFamily: 'Helvetica, Arial', fontSize: '50px', color:'#00FF00' });
+        var startMenuText = new Text(this, 75, 75, 'Start Menu', { fontSize: '49pt', color:'#0000FF'});
+        var level1Text = new Text(this, 75, 200, 'Level 1', { fontSize: '50px', color:'#00FF00' });
+        var level2Text = new Text(this, 75, 300, 'Level 2', { fontSize: '50px', color:'#00FF00' });
+        var level3Text = new Text(this, 75, 400, 'Level 3', { fontSize: '50px', color:'#00FF00' });
         // Start Button
-        var lvl1Start = this.add.sprite(this.sys.canvas.width - 125, 225, 'blueButton').setInteractive();
+        var lvl1Start = new Button(this, this.sys.canvas.width - 125, 225, 'blueButton');
 
-        var lvl2Start = this.add.sprite(this.sys.canvas.width - 125, 325, 'blueButton').setInteractive();
+        var lvl2Start = new Button(this, this.sys.canvas.width - 125, 325, 'blueButton');
 
-        var lvl3Start = this.add.sprite(this.sys.canvas.width - 125, 425, 'blueButton').setInteractive();
+        var lvl3Start = new Button(this, this.sys.canvas.width - 125, 425, 'blueButton');
         // Use 'pointerover' for mouseover event. Use 'pointerout' for mouse-leave event. - can use setTexture to change texture, for instance.
         lvl1Start.on('pointerdown', function(event) {
             this.scene.start('level1');
@@ -378,7 +404,6 @@ var StartMenuScene = class extends Phaser.Scene {
         lvl3Start.on('pointerdown', function(event) {
             this.scene.start('level3');
         }, this); // Start the main game.
-
     }
 };
 
@@ -397,13 +422,9 @@ class gameOver extends Phaser.Scene{
 		background.setScale(0.7);
 
 		 // ---- UI elements ----
-        var startMenuText = this.add.text(this.sys.canvas.width - 300, this.sys.canvas.height - 100, 'Return to Menu', { fontSize: '50px', color:'#00FF00', rtl: true});
-
-		// Back to start menu button
-        var menuButton = this.add.sprite(this.sys.canvas.width - 100, this.sys.canvas.height - 100, 'blueButton').setInteractive();
-        menuButton.setDisplaySize(100,100);
-        menuButton.on('pointerdown', function(event) {
-            this.scene.start('startMenu');
+        var startMenuText = new Text(this, menuAnchors.topRight.x, menuAnchors.topRight.y, 'Return to Menu', { fontSize: '49pt', color:'#00FF00', rtl: true});
+        startMenuText.on('pointerDown', function(event) {
+            this.start('startMenu');
         }, this); // Return to the start menu.
 	}
 
@@ -421,6 +442,11 @@ class LevelScene extends Phaser.Scene {
         this.waveFile = 'src/waves/' + this.levelName + '.json';
         this.enemyWaves = null;
         this.projectiles = null;
+        this.uiElements = null;
+        // List of towers you can buy on this level.
+        // Can override to change which towers would be buyable.
+        // Creates 3x3 grid, filled left to right, top to bottom, starting from top-left.
+        this.towerTypes = ['piercingTower', 'basicTower'];
 
 		this.enemySpawn = { 'x': 0, 'y': 0 };
 		this.enemyGoal  = { 'x': 0, 'y': 0 };
@@ -453,37 +479,12 @@ class LevelScene extends Phaser.Scene {
 		// Set map layers
 		this.towerPlaceable = this.map.createDynamicLayer('towerPlace', tiles);
         this.backgroundLayer = this.map.createStaticLayer('background', tiles);
+        
 
         // ---- Player loading ----
         // TODO: Test purposes only. If we implement save states, this should be refactored.
         // Calling Player(name, gold, lives, waveNum, towers, levelName) - taking defaults for most
         player = new Player(null, null, null, null, this.levelName);
-
-        // ---- UI elements ----
-        var startMenuText = this.add.text(this.sys.canvas.width - 300, this.sys.canvas.height - 100, 'Return to Menu', { fontSize: '50px', color:'#00FF00', rtl: true});
-
-        // ++ Buttons ++
-        // Back to start menu button
-        var menuButton = this.add.sprite(this.sys.canvas.width - 100, this.sys.canvas.height - 100, 'blueButton').setInteractive();
-        menuButton.setDisplaySize(100,100);
-        menuButton.on('pointerdown', function(event) {
-            this.scene.start('startMenu');
-        }, this); // Return to the start menu.
-
-        // Button to start next wave.
-        var startWaveButton = this.add.sprite(100, this.sys.canvas.height - 100, 'blueButton').setInteractive();
-        startWaveButton.setDisplaySize(100,100);
-        startWaveButton.on('pointerdown', function(event) {
-            this.enemyWaves.startNextWave();
-        }, this);
-
-        // ++ Non-interactible indicators ++
-        // Life counter
-		this.liveText = this.add.text(16,16, 'Lives: ' + player.lives, { fontSize: '24px', fill: '#FFF' })
-
-		// Gold counter
-		this.goldText = this.add.text(16,40, 'Gold: ' + player.gold, { fontSize: '24px', fill: '#FFF' });
-
 
 		// ----- Towers -----
 		player.towers = this.add.group({
@@ -524,6 +525,37 @@ class LevelScene extends Phaser.Scene {
 
 	    // ---- Enemies ----
         this.enemyWaves = new EnemyWaves(this);
+
+        // Add UI Elements
+        this.buildUI();
+    }
+
+    // Add UI elements.
+    buildUI() {
+        this.uiElements = this.add.group();
+        // ---- UI elements ----
+
+        // ++ Buttons ++
+        // Back to start menu button
+        var menuTextButton = new Text(this, menuAnchors.topRight.x, menuAnchors.topRight.y, 'Return to Menu', { fontSize: '50px', color:'#00FF00', rtl: true}).setInteractive();
+        menuTextButton.on('pointerdown', function(event) {
+            this.scene.start('startMenu');
+        }, this);
+
+        // Button to start next wave.
+        var startWaveButton = new Button(this, menuAnchors.bottomLeft.x, menuAnchors.bottomLeft.y, 'blueButton');
+        startWaveButton.x += startWaveButton.displayWidth / 2;
+        startWaveButton.y -= startWaveButton.displayHeight / 2;
+        startWaveButton.on('pointerdown', function(event) {
+            this.enemyWaves.startNextWave();
+        }, this);
+
+        // ++ Non-interactible indicators ++
+        // Life counter
+		this.liveText = new Text(this, menuAnchors.topLeft.x + 16, menuAnchors.topLeft.y + 16, 'Lives: ' + player.lives, { fontSize: '24px', fill: '#FFF' });
+
+		// Gold counter
+		this.goldText = new Text(this, menuAnchors.topLeft.x + 16, menuAnchors.topLeft.y + 40, 'Gold: ' + player.gold, { fontSize: '24px', fill: '#FFF' });
     }
 
 	update() {
@@ -757,6 +789,40 @@ class Player {
 
 
 };
+
+// ========= UI classes ========
+// Used to add interactible button UI elements with some common defaults
+// These are always added to the scene, and interactive by default.
+class Button extends Phaser.GameObjects.Sprite {
+    constructor(scene, x, y, texture, frame) {
+        super(scene, x, y, texture, frame);
+        // Always add to Scene - don't use this class if you don't want to add to scene.
+        scene.sys.displayList.add(this);
+        if(this.preUpdate) {
+            scene.sys.updateList.add(this);
+        }
+        this.setInteractive();
+    }
+}
+// =========  class ========
+// Used to add game text with some common defaults
+// These are always added to the scene, and non-interactive by default
+class Text extends Phaser.GameObjects.Text {
+    constructor(scene, x, y, text, style) {
+        // Set style defaults prior to calling constructor
+        style = style || {};
+        style.fontFamily = style.fontFamily || "Visitor";
+        style.fontSize = style.fontSize || "7pt"; // Pixel perfect at this font size.
+        super(scene, x, y, text, style);
+
+        // Always add to Scene - don't use this class if you don't want to add to scene.
+        scene.sys.displayList.add(this);
+        if(this.preUpdate) {
+            scene.sys.updateList.add(this);
+        }
+
+    }
+}
 
 // ======== Global Event Listeners ========
 window.addEventListener('load', windowOnLoad(), false);

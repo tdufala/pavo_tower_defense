@@ -2,6 +2,7 @@
 Team members: Tim Dufala, Brad Beise, Jigar Gor
 
 Phaser 3 Project Template copied from [photonstorm/phaser3-project-template](https://github.com/photonstorm/phaser3-project-template)
+Using [Visitor](https://www.dafont.com/visitor.font) font.
 
 ### Requirements
 

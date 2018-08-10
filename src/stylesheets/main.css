@@ -23,6 +23,13 @@ body {
     height: 100%;
 }
 
+@font-face {
+    font-family: "Visitor";
+    font-style: normal;
+    font-weight: normal;
+    src: url("/assets/fonts/visitor/visitor1.ttf");
+}
+
 @media (max-width: 1344px) {
     #phaser-app {
         max-width: 100%;

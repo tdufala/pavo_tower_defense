@@ -10,24 +10,35 @@
 "waves": [
     [
         {
-            "enemyType": "normalEnemy"
-        }, {
-            "enemyType": "scaryEnemy"
-        }, {
             "enemyType": "normalEnemy",
-            "enemyCount": 2
+            "enemyCount": 25
         }
     ], [
         {
-            "enemyType": "normalEnemy"
-        }, {
-            "enemyType": "scaryEnemy"
-        }, {
             "enemyType": "normalEnemy",
-            "enemyCount": 5,
-            "spawnSpread": 500,
-            "spawnDelay": 5000
+            "enemyCount": 50,
+            "spawnSpread": 500
+        }, {
+            "enemyType": "scaryEnemy",
+            "enemyCount": 10
         }
-        
+    ], [
+        {
+            "enemyType": "normalEnemy",
+            "enemyCount": 75,
+            "spawnSpread": 300
+        }
+    ], [
+        {
+            "enemyType": "normalEnemy",
+            "enemyCount": 100,
+            "spawnSpread": 250
+        }
+    ], [
+        {
+            "enemyType": "normalEnemy",
+            "enemyCount": 1000,
+            "spawnSpread": 50
+        }
     ]
 ]}
