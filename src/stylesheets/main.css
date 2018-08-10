@@ -4,21 +4,11 @@ body {
 
 #phaser-app {
     padding: 0px;
+	width: 60%;
 }
 
 #phaser-app > canvas {
-    --nativeGameWidth: 1344px; /* Change this property if canvas width changes */
-    --nativeGameHeight: 1096px; /* Change this property if canvas height changes */
-    --renderWidth: var(--nativeGameWidth); /* Change this to scale the width */
-    --renderHeight: var(--nativeGameHeight); /* Change this to scale the height */
-    --marginWidth: calc(100vw - var(--renderWidth)); /* Shouldn't need to change this */
-    --marginHeight: calc(100vh - var(--renderHeight)); /* Shouldn't need to change this */
-    max-width: var(--renderWidth);
-    max-height: var(--renderHeight);
-    margin-left: calc(var(--marginWidth) / 2); /* Shouldn't need to change this */
-    margin-right: calc(var(--marginWidth) / 2); /* Shouldn't need to change this */
-    margin-top: 0px;
-    margin-bottom: 0px;
+
     width: 100%;
     height: 100%;
 }
