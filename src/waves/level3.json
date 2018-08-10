@@ -3,7 +3,7 @@
     "bigNormalEnemy": {
         "altType": "normalEnemy",
         "enemyProps": {
-            "health": 1000
+            "hp": 1000
         }
     }
 },
@@ -12,22 +12,7 @@
         {
             "enemyType": "normalEnemy"
         }, {
-            "enemyType": "scaryEnemy"
-        }, {
-            "enemyType": "normalEnemy",
-            "enemyCount": 2
+            "enemyType": "bigNormalEnemy"
         }
-    ], [
-        {
-            "enemyType": "normalEnemy"
-        }, {
-            "enemyType": "scaryEnemy"
-        }, {
-            "enemyType": "normalEnemy",
-            "enemyCount": 5,
-            "spawnSpread": 500,
-            "spawnDelay": 5000
-        }
-        
     ]
 ]}

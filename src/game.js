@@ -19,8 +19,12 @@ var config = {
 	useTicker: true,
     scene: scenes
 };
-
-// Used for some positioning
+// just a little shortcut...
+var normalFont = {
+    fontSize: "49pt"
+};
+// Global reference points, can be used for positioning
+// Note these are static. May be useful to update them
 var menuBarSize = {
     x: config.width,
     y: 200
@@ -44,6 +48,54 @@ var menuAnchors = {
     }
 }
 
+var canvasAnchors = {
+    topLeft: {
+        x: 0,
+        y: 0
+    },
+    topRight: {
+        x: config.width,
+        y: 0
+    },
+    bottomLeft: {
+        x: 0,
+        y: config.height
+    },
+    bottomRight: {
+        x: config.width,
+        y: config.height
+    }
+};
+calcOtherPoints.bind(canvasAnchors).call();
+calcOtherPoints.bind(menuAnchors).call();
+
+// Works for rectangular shapes
+function calcOtherPoints() {
+    var middleX = (this.topRight.x - this.topLeft.x) / 2;
+    var middleY = (this.bottomLeft.y - this.topLeft.y) / 2;
+    this.topMiddle = {
+        x: this.topLeft.x + middleX,
+        y: this.topLeft.y
+    };
+    this.bottomMiddle = {
+        x: this.bottomLeft.x + middleX,
+        y: this.bottomLeft.y
+    };
+    this.leftMiddle = {
+        x: this.topLeft.x,
+        y: middleY
+    };
+    this.rightMiddle = {
+        x: this.topRight.x,
+        y: middleY
+    };
+    this.middle = {
+        x: middleX,
+        y: middleY
+    };
+}
+
+
 
 // Code to set up game on initial load
 function windowOnLoad() {
@@ -53,6 +105,7 @@ function windowOnLoad() {
     scenes.push(Level2Scene);
     scenes.push(Level3Scene);
 	scenes.push(gameOver);
+    scenes.push(victoryScene);
     // Run the game
     player = new Player();
     game = new Phaser.Game(config);
@@ -264,28 +317,31 @@ class Projectile extends Phaser.GameObjects.Sprite {
 
 // ======== Enemy Units ========
 class Enemy extends Phaser.GameObjects.PathFollower {
-	constructor(scene, path, name, spawnDelay){
+	constructor(scene, path, name, spawnDelay, props){
 		super(scene, path, -Infinity, -Infinity, name);
 		this.scene = scene;
 		this.name = name;
-		var config = this.scene.cache.json.get(this.name);
+
+        // Read config vars
+        var config = this.scene.cache.json.get(this.name);
+        Object.assign(config, props);
         this.spawnDelay = spawnDelay;
-		this.totalHP = config.hp;
+		this.totalHP = config.hp || 1;
         this.hp = this.totalHP;
         this.lastHP = this.hp; /* HP since last update */
-        this.bounty = config.bounty;
+        this.percentHP = 1;
+        this.bounty = config.bounty || 0;
         this.setActive(false);
         this.setVisible(false);
 		this.hpBar = this.scene.add.graphics();
-		this.hpText = new Text(scene, 0,0, '', { fontSize: '10px', fill: '#FFF' });
         this.fullHPColor = new Phaser.Display.Color(0,255,0); /* Green */
         this.halfHPColor = new Phaser.Display.Color(255,255,0); /* Yellow */
         this.noHPColor = new Phaser.Display.Color(255,0,0); /* Red */
         this.currentHPColor = this.fullHPColor;
 
         // Add animation
-		var speed = config.speed || 1;
-        var duration = Math.floor(this.scene.mapWidth/speed * 1000);
+		this.speed = config.speed || 1;
+        var duration = Math.floor(this.scene.mapWidth/this.speed * 1000);
         this.pathConfig = {
             ease: 'Linear',
             duration: duration,
@@ -314,6 +370,7 @@ class Enemy extends Phaser.GameObjects.PathFollower {
         // Starts updating
         this.setActive(true);
         this.setVisible(true);
+		this.hpText = new Text(this.scene, 0,0, this.hp, { fontSize: '14pt' });
         // Start in the correct position - must be done after startFollow()
         this.setPosition(this.path.getStartPoint());
     }
@@ -343,22 +400,22 @@ class Enemy extends Phaser.GameObjects.PathFollower {
         // Avoid needless computation by tracking HP since last update
         if(this.lastHP != this.hp) {
             this.lastHP = this.hp;
-            var hpPercentage = this.hp / this.totalHP;
+		    this.hpText.setText(this.hp);
+            this.percentHP = this.hp / this.totalHP;
             // Interpolate colors based on hp percentage. We interpolate to a middle color (yellow), since yellow is 255 red and 255 green
-            if(hpPercentage >= 0.5) {
-                this.currentHPColor = Phaser.Display.Color.Interpolate.ColorWithColor(this.halfHPColor, this.fullHPColor, 500, Math.floor((hpPercentage - 0.5) * 1000));
+            if(this.percentHP >= 0.5) {
+                this.currentHPColor = Phaser.Display.Color.Interpolate.ColorWithColor(this.halfHPColor, this.fullHPColor, 500, Math.floor((this.percentHP - 0.5) * 1000));
             } else {
-                this.currentHPColor = Phaser.Display.Color.Interpolate.ColorWithColor(this.noHPColor, this.halfHPColor, 500, Math.floor(hpPercentage * 1000));
+                this.currentHPColor = Phaser.Display.Color.Interpolate.ColorWithColor(this.noHPColor, this.halfHPColor, 500, Math.floor(this.percentHP * 1000));
             }
         }
         var currentHPColorString = Phaser.Display.Color.RGBToString(Math.floor(this.currentHPColor.r), Math.floor(this.currentHPColor.g), Math.floor(this.currentHPColor.b), 1, "0x");
 		this.hpBar.clear();
 		this.hpBar.lineStyle(1, 0x000000, 0); /* Borderless */
 		this.hpBar.fillStyle(currentHPColorString);
-		this.hpBar.fillRect(this.x - this.totalHP/2, this.y - this.scene.tileSize/2, this.hp, 10);
-		this.hpBar.strokeRect(this.x - this.totalHP/2, this.y - this.scene.tileSize/2, this.totalHP, 10);
-		this.hpText.setPosition(this.x-20, this.y - this.scene.tileSize/2);
-		this.hpText.setText(this.hp + '/' + this.totalHP);
+		this.hpBar.fillRect(this.x - this.width/2, this.y + this.height/2 - 2, this.width * this.percentHP, 1);
+		this.hpBar.strokeRect(this.x - this.width/2, this.y + this.height/2 - 2, this.width, 1);
+		this.hpText.setPosition(this.x - this.width/2, this.y + this.height/2 - 16);
 
     }
 };
@@ -373,10 +430,10 @@ var StartMenuScene = class extends Phaser.Scene {
     }
 
     preload() {
-        this.load.image('blueButton', 'assets/images/blue_button09.png');
+        this.load.image('defaultButton', 'assets/images/blue_button09.png');
         this.load.image('blueCircle', 'assets/images/blue_circle.png');
         this.load.image('greenCircle', 'assets/images/green_circle.png');
-        // A hack to load a custom font. wacky...
+        // Hack to load the Visitor font
         this.add.text(-Infinity, -Infinity, "Loading Visitor Font...", {font:"1px Visitor", fill: "#FFFFFF"}).destroy();
 
     }
@@ -387,11 +444,11 @@ var StartMenuScene = class extends Phaser.Scene {
         var level2Text = new Text(this, 75, 300, 'Level 2', { fontSize: '50px', color:'#00FF00' });
         var level3Text = new Text(this, 75, 400, 'Level 3', { fontSize: '50px', color:'#00FF00' });
         // Start Button
-        var lvl1Start = new Button(this, this.sys.canvas.width - 125, 225, 'blueButton');
+        var lvl1Start = new Button(this, this.sys.canvas.width - 125, 225);
 
-        var lvl2Start = new Button(this, this.sys.canvas.width - 125, 325, 'blueButton');
+        var lvl2Start = new Button(this, this.sys.canvas.width - 125, 325);
 
-        var lvl3Start = new Button(this, this.sys.canvas.width - 125, 425, 'blueButton');
+        var lvl3Start = new Button(this, this.sys.canvas.width - 125, 425);
         // Use 'pointerover' for mouseover event. Use 'pointerout' for mouse-leave event. - can use setTexture to change texture, for instance.
         lvl1Start.on('pointerdown', function(event) {
             this.scene.start('level1');
@@ -408,13 +465,13 @@ var StartMenuScene = class extends Phaser.Scene {
 };
 
 
-class gameOver extends Phaser.Scene{
+var gameOver = class extends Phaser.Scene {
 	constructor(str) {
 		super('gameOver');
 	}
 	preload(){
 		this.load.image('gameOver', 'assets/images/game_over.png');
-		this.load.image('blueButton', 'assets/images/blue_button09.png');
+		this.load.image('defaultButton', 'assets/images/blue_button09.png');
 	}
 
 	create(){
@@ -422,13 +479,27 @@ class gameOver extends Phaser.Scene{
 		background.setScale(0.7);
 
 		 // ---- UI elements ----
-        var startMenuText = new Text(this, menuAnchors.topRight.x, menuAnchors.topRight.y, 'Return to Menu', { fontSize: '49pt', color:'#00FF00', rtl: true});
-        startMenuText.on('pointerDown', function(event) {
-            this.start('startMenu');
+        var startMenuText = new Text(this, menuAnchors.topRight.x, menuAnchors.topRight.y, 'Return to Menu', { fontSize: '49pt', color:'#00FF00', rtl: true}).setInteractive();
+        startMenuText.on('pointerdown', function(event) {
+            this.scene.start('startMenu');
         }, this); // Return to the start menu.
 	}
 
-}
+};
+
+var victoryScene = class extends Phaser.Scene {
+    constructor(str) {
+        super('victory');
+    }
+    preload() {
+        this.load.image('defaultButton', 'assets/images/blue_button09.png');
+    }
+    create() {
+        var youWinText = new Text(this, canvasAnchors.middle.x, canvasAnchors.middle.y, "You win", normalFont);
+        var finalGoldText = new Text(this, canvasAnchors.middle.x, canvasAnchors.middle.y+100, "Final Gold: " + player.gold, normalFont);
+        var finalLifeText = new Text(this, canvasAnchors.middle.x, canvasAnchors.middle.y+200, "Final Lives: " + player.lives, normalFont);
+    }
+};
 
 
 // Base class for levels
@@ -454,7 +525,7 @@ class LevelScene extends Phaser.Scene {
 
     preload() {
         // Load common assets
-        this.load.image('blueButton', 'assets/images/blue_button09.png');
+        this.load.image('defaultButton', 'assets/images/blue_button09.png');
         this.load.image('gameTiles', 'assets/spritesheets/minimalTilesTowers.png', { frameWidth: 64, frameHeight: 64});
         this.load.tilemapTiledJSON(this.levelName, 'src/maps/' + this.levelName + '.json');
         this.load.json('waveFile' + this.levelName, this.waveFile);
@@ -543,11 +614,12 @@ class LevelScene extends Phaser.Scene {
         }, this);
 
         // Button to start next wave.
-        var startWaveButton = new Button(this, menuAnchors.bottomLeft.x, menuAnchors.bottomLeft.y, 'blueButton');
+        var startWaveButton = new Button(this, menuAnchors.bottomLeft.x, menuAnchors.bottomLeft.y);
         startWaveButton.x += startWaveButton.displayWidth / 2;
         startWaveButton.y -= startWaveButton.displayHeight / 2;
         startWaveButton.on('pointerdown', function(event) {
-            this.enemyWaves.startNextWave();
+            // Infinity signals game is won
+            this.enemyWaves.startNextWave()
         }, this);
 
         // ++ Non-interactible indicators ++
@@ -560,10 +632,14 @@ class LevelScene extends Phaser.Scene {
 
 	update() {
 		// Check for game over, man.
-		if (player.lives <= 0){
+		if(player.lives <= 0){
 			player.lives = 0;
             this.scene.start('gameOver');
 		}
+        // Check for game won
+        if(this.enemyWaves.gameWon()) {
+            this.scene.start('victory');
+        }
 
 		this.liveText.setText('Lives: ' + player.lives);
 		this.goldText.setText('Gold: ' + player.gold);
@@ -685,16 +761,16 @@ class EnemyWaves {
                 // - OR -
                 // Somehow agglomerate the objects into one. Could be useful to write a function that takes
                 // two objects representing an enemy config and combines them into one (first arg preceding the second).
-                var enemyProps = null;
+                var enemyProps = {};
                 if(enemyTypes[enemyType]) {
-                    enemyProps = enemyTypes[enemyType].enemyProps || null;
+                    enemyProps = enemyTypes[enemyType].enemyProps || {};
                     // Now that we've consume the original type, we set it to an alternate one for use
                     enemyType = enemyTypes[enemyType].altType || enemyType;
                 }
 
                 wave.delay += spawnDelay;
 				for (let n = 0; n < enemyCount; n++){
-					let enemy = new Enemy(this.scene, this.scene.path, enemyType, wave.delay);
+					let enemy = new Enemy(this.scene, this.scene.path, enemyType, wave.delay, enemyProps);
 					wave.enemies.add(enemy, true);
                     wave.enemyCount++;
                     wave.delay += spawnSpread;
@@ -738,15 +814,23 @@ class EnemyWaves {
 
     isWaveActive() {
         if(!this.activeEnemies) {
-            return 0;
+            return false;
         }
         if(this.activeEnemies.length <= 0) {
-            return 0;
+            return false;
         }
-        console.log("Active Enemy count: " + this.activeEnemies.length);
         return this.activeEnemies.length;
     }
 
+    gameWon() {
+        if(this.currentWave >= this.waveCount) {
+            this.allWavesStarted = true;
+        }
+        if(this.allWavesStarted && !this.isWaveActive()) {
+            return true;
+        }
+        return false;
+    }
 
 
 };
@@ -795,6 +879,7 @@ class Player {
 // These are always added to the scene, and interactive by default.
 class Button extends Phaser.GameObjects.Sprite {
     constructor(scene, x, y, texture, frame) {
+        texture = texture || 'defaultButton';
         super(scene, x, y, texture, frame);
         // Always add to Scene - don't use this class if you don't want to add to scene.
         scene.sys.displayList.add(this);
