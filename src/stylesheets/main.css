@@ -23,8 +23,7 @@ body {
     height: 100%;
 }
 
-/* Change media query to render width if canvas width changes */
-@media screen and (max-width: 1344px) {
+@media (max-width: 1344px) {
     #phaser-app {
         max-width: 100%;
     }
@@ -34,8 +33,7 @@ body {
     }
 }
 
-// Change media query to render height if canvas width changes
-@media screen and (max-height: 1096px) {
+@media (max-height: 1096px) {
     #phaser-app {
         max-height: 100%;
     }

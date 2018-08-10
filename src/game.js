@@ -3,8 +3,6 @@
 'use strict';
 import 'phaser';
 import css from './stylesheets/main.css'
-/* const waveFuncs = require('./waves.js')
-const enemyFuncs = require('./enemy.js') */
 
 
 // ======== Globals ========
@@ -43,32 +41,32 @@ class Tower extends Phaser.GameObjects.Sprite {
         super(scene, x, y, name);
 		this.scene = scene;
 		this.name = name;
-		
+
 		this.isDraggable = false;
 
         // Read data from config file.
         var config = this.scene.cache.json.get(this.name);
         // Default cost of 0
         this.cost = config.cost || 0;
-		
+
 		//used to return tower to starting position if placed in invalid location
 		this.startPos = {'x': x, 'y': y};
-		
+
 		//projectile to use for this tower
 		this.projectile = config.projectile;
-		
+
 		//marker used for tower
 		this.marker = this.scene.add.graphics();
-		
+
 		//active represents whether or not the tower is searching for enemies
 		this.isOn = false;
-		
+
 		//radius to look for enemies
 		this.radius = config.radius;
-		
+
 		//time to wait between shots
 		this.bullet_delay = config.bullet_delay;
-		
+
 		//this.time = this.time.addEvent({delay: 0, repeat: 0});
 		this.timer = this.scene.time.addEvent({delay: 1, repeat: 0});
 		this.purch = 0;
@@ -99,7 +97,7 @@ class Tower extends Phaser.GameObjects.Sprite {
 							}
 							return true;
 						}
-					}); 
+					});
 					if (canPlace){
 						gameObject.marker.setAlpha(1);
 						gameObject.marker.x = this.scene.map.tileToWorldX(pointerTileX);
@@ -119,7 +117,7 @@ class Tower extends Phaser.GameObjects.Sprite {
 								canPlace = true;
 								return true;
 							}
-							
+
 						}
 					});
 					gameObject.marker.setAlpha(0);
@@ -136,7 +134,7 @@ class Tower extends Phaser.GameObjects.Sprite {
 
 					} else {
 						gameObject.setPosition(gameObject.startPos.x, gameObject.startPos.y);
-						
+
 					}
 				});
 			}	else {
@@ -148,15 +146,15 @@ class Tower extends Phaser.GameObjects.Sprite {
 				this.marker.strokeRect(0, 0, this.scene.tileSize, this.scene.tileSize);
 				this.marker.setAlpha(1);
 				this.setAlpha(0.5);
-				
+
 			}
 		} else {
 			//projectile logic here
-			
-			
+
+
 			//get nearest enemy (if there are any)
 			var enemies = this.scene.enemyWaves.activeEnemies;
-			
+
 			if (enemies){
 				var nearestEnemy = {'index' : null, 'dist' : 1000};
 				for (var i = 0; i < enemies.length; i++){
@@ -164,19 +162,19 @@ class Tower extends Phaser.GameObjects.Sprite {
 					if (nearestEnemy.index === null || nearestEnemy.dist > dist){
 						nearestEnemy.index = i;
 						nearestEnemy.dist = dist;
-					} 
+					}
 				}
 				//if nearest enemy is within detection radius, shoot
 				if (nearestEnemy.dist <= this.radius  && this.timer.getProgress() == 1 ){
 					var projectile = new Projectile(this.scene, this.x, this.y, this.projectile, null, enemies[nearestEnemy.index]);
 					this.scene.projectiles.add(projectile, true);
  					this.timer.destroy();
-					this.timer = this.scene.time.addEvent({delay: this.bullet_delay, repeat: 0}); 
+					this.timer = this.scene.time.addEvent({delay: this.bullet_delay, repeat: 0});
 				}
 
 			}
 		}
-	
+
 	}
 
 };
@@ -199,7 +197,7 @@ class Projectile extends Phaser.GameObjects.Sprite {
 			//timer used to make sure bullet doesn't inflict damage on same enemy twice
 			this.timer = this.scene.time.addEvent({delay: 100, repeat: 0});
 		}
-		
+
     }
 
 
@@ -214,7 +212,7 @@ class Projectile extends Phaser.GameObjects.Sprite {
 			if (this.x < this.target.x) factor = -1;
 			this.y -= this.speed * Math.sin(angle)* factor;
 			this.x -= this.speed * Math.cos(angle) * factor;
-			
+
 			var dist = Math.hypot(this.y - this.target.y, this.x - this.target.x);
 			if(dist <= this.scene.tileSize/2){
 				this.target.hp -= this.damage;
@@ -222,10 +220,10 @@ class Projectile extends Phaser.GameObjects.Sprite {
 			}
 		} else if (this.type == 'piercing'){
 			var angle = this.targetAngle;
-					
+
 			this.y -= this.speed * Math.sin(angle)* this.factor;
 			this.x -= this.speed * Math.cos(angle) * this.factor;
-			
+
 			var enemies = this.scene.enemyWaves.activeEnemies;
 			for (let i = 0; i < enemies.length; i++){
 				var dist = Math.hypot(this.y - enemies[i].y, this.x - enemies[i].x);
@@ -235,7 +233,7 @@ class Projectile extends Phaser.GameObjects.Sprite {
 					this.timer = this.scene.time.addEvent({delay: 100, repeat: 0});
 				}
 			}
-			
+
 		}
     }
 };
@@ -248,13 +246,18 @@ class Enemy extends Phaser.GameObjects.PathFollower {
 		this.name = name;
 		var config = this.scene.cache.json.get(this.name);
         this.spawnDelay = spawnDelay;
-        this.hp = config.hp;
-		this.hpStart = config.hp;
+		this.totalHP = config.hp;
+        this.hp = this.totalHP;
+        this.lastHP = this.hp; /* HP since last update */
         this.bounty = config.bounty;
         this.setActive(false);
         this.setVisible(false);
 		this.hpBar = this.scene.add.graphics();
 		this.hpText = this.scene.add.text(0,0, '', { fontSize: '10px', fill: '#FFF' });
+        this.fullHPColor = new Phaser.Display.Color(0,255,0); /* Green */
+        this.halfHPColor = new Phaser.Display.Color(255,255,0); /* Yellow */
+        this.noHPColor = new Phaser.Display.Color(255,0,0); /* Red */
+        this.currentHPColor = this.fullHPColor;
 
         // Add animation
 		var speed = config.speed || 1;
@@ -294,15 +297,6 @@ class Enemy extends Phaser.GameObjects.PathFollower {
     // Starts being called after this.active == true (from setActive)
 
     update(time, delta) {
-		this.hpBar.clear();
-		this.hpBar.lineStyle(1, 0x00FF00, 1);
-		this.hpBar.fillStyle(0x00FF0000, 1);
-		this.hpBar.fillRect(this.x - this.hpStart/2, this.y - this.scene.tileSize/2, this.hp, 10);
-		this.hpBar.strokeRect(this.x - this.hpStart/2, this.y - this.scene.tileSize/2, this.hpStart, 10);
-		this.hpText.setPosition(this.x-20, this.y - this.scene.tileSize/2);
-		this.hpText.setText(this.hp + '/' + this.hpStart);
-		//this.hpText.setOrigin(0,0);
-		
         // Check if we've been killed.
         // If so, give player gold and get destroyed.
         if(this.hp <= 0) {
@@ -310,6 +304,7 @@ class Enemy extends Phaser.GameObjects.PathFollower {
 			this.hpBar.destroy();
 			this.hpText.destroy();
             this.destroy();
+            return; // Must return here.
         }
 
 		//if the enemy is past the end of the map
@@ -318,7 +313,28 @@ class Enemy extends Phaser.GameObjects.PathFollower {
 			this.hpBar.destroy();
 			this.hpText.destroy();
 			this.destroy();
+            return; // Must return here.
 		}
+
+        // Avoid needless computation by tracking HP since last update
+        if(this.lastHP != this.hp) {
+            this.lastHP = this.hp;
+            var hpPercentage = this.hp / this.totalHP;
+            // Interpolate colors based on hp percentage. We interpolate to a middle color (yellow), since yellow is 255 red and 255 green
+            if(hpPercentage >= 0.5) {
+                this.currentHPColor = Phaser.Display.Color.Interpolate.ColorWithColor(this.halfHPColor, this.fullHPColor, 500, Math.floor((hpPercentage - 0.5) * 1000));
+            } else {
+                this.currentHPColor = Phaser.Display.Color.Interpolate.ColorWithColor(this.noHPColor, this.halfHPColor, 500, Math.floor(hpPercentage * 1000));
+            }
+        }
+        var currentHPColorString = Phaser.Display.Color.RGBToString(Math.floor(this.currentHPColor.r), Math.floor(this.currentHPColor.g), Math.floor(this.currentHPColor.b), 1, "0x");
+		this.hpBar.clear();
+		this.hpBar.lineStyle(1, 0x000000, 0); /* Borderless */
+		this.hpBar.fillStyle(currentHPColorString);
+		this.hpBar.fillRect(this.x - this.totalHP/2, this.y - this.scene.tileSize/2, this.hp, 10);
+		this.hpBar.strokeRect(this.x - this.totalHP/2, this.y - this.scene.tileSize/2, this.totalHP, 10);
+		this.hpText.setPosition(this.x-20, this.y - this.scene.tileSize/2);
+		this.hpText.setText(this.hp + '/' + this.totalHP);
 
     }
 };
@@ -404,7 +420,7 @@ class LevelScene extends Phaser.Scene {
         this.tileSize = 64;
         this.waveFile = 'src/waves/' + this.levelName + '.json';
         this.enemyWaves = null;
-		this.projectiles = null;
+        this.projectiles = null;
 
 		this.enemySpawn = { 'x': 0, 'y': 0 };
 		this.enemyGoal  = { 'x': 0, 'y': 0 };
@@ -460,7 +476,7 @@ class LevelScene extends Phaser.Scene {
         startWaveButton.on('pointerdown', function(event) {
             this.enemyWaves.startNextWave();
         }, this);
-		
+
         // ++ Non-interactible indicators ++
         // Life counter
 		this.liveText = this.add.text(16,16, 'Lives: ' + player.lives, { fontSize: '24px', fill: '#FFF' })
@@ -477,14 +493,14 @@ class LevelScene extends Phaser.Scene {
 		//bottom right 5 tiles used for tower placement
 		var basicTower = new Tower(this, this.tileSize / 2, this.mapHeight - this.tileSize/2, 'basicTower' );
 		player.towers.add(basicTower, true);
-		
+
 		var piercingTower = new Tower(this, this.tileSize /2 + this.tileSize, this.mapHeight - this.tileSize/2, 'piercingTower');
 		player.towers.add(piercingTower, true);
 
 		// ----- Projectiles -----
- 		this.projectiles = this.add.group(); 
-		
-		
+ 		this.projectiles = this.add.group();
+
+
 	    // Add path for enemies on this level.
 	    this.path = new Phaser.Curves.Path();
 
@@ -519,42 +535,19 @@ class LevelScene extends Phaser.Scene {
 
 		this.liveText.setText('Lives: ' + player.lives);
 		this.goldText.setText('Gold: ' + player.gold);
-		
+
 		var proj = this.projectiles.getChildren();
 		proj.forEach(function (projectile){
 			projectile.update();
 		});
-
-		//if (this.waveCount > 0){
-		//	this.timeText.setText('Next Wave in ' + Math.round(this.waveDelay * (1-this.timer.getProgress())) + 's')
-		//} else {
-		//	this.timeText.setText('');
-		//}
-
-		//reset timer if necessary
- 		//if (this.timer.getProgress() == 1 && this.waveCount > 1){
-		//	this.timer.destroy();
-		//	this.timer = this.time.addEvent({delay: this.waveDelay * 1000, repeat: 0});
-		//	this.waveCount -=1;
-		//} else if (this.timer.getProgress() == 1){
-		//	this.timer.destroy();
-		//	this.timeText.setText('');
-		//}
 	}
-	
+
 
 };
 // Level 1
 var Level1Scene = class extends LevelScene {
     constructor() {
         super('level1');
-		// Constants specific to this level
-		
-		//don't need this anymore since all data is loaded from map file
-/* 		this.enemySpawn = {'x': -2 * this.tileSize.x,
-                                   'y': 18 * this.tileSize.y};
-		this.enemyGoal  = {'x': this.mapWidth + 2 * this.tileSize.x,
-                                   'y': 10 * this.tileSize.y}; */
     }
 
     preload() {
@@ -612,7 +605,7 @@ class EnemyWaves {
         this.generateWaves(waveFileJSON);
     }
 
-    generateWaves(waveFileJSON) { // TODO: IMPLEMENT
+    generateWaves(waveFileJSON) {
         // { waves: [ // Each element in waves is a single wave
         //     [ // Each element of a wave is a list containing an assortment of enemies to be spawned for that wave
         //          { // Enemies - spawns one or more enemies of the same type at a given delay
@@ -721,7 +714,7 @@ class EnemyWaves {
         console.log("Active Enemy count: " + this.activeEnemies.length);
         return this.activeEnemies.length;
     }
-	
+
 
 
 };
@@ -761,7 +754,7 @@ class Player {
         var saveFileName = saveFileName || this.name;
         return saveFileName;
     }
-	
+
 
 };
 
