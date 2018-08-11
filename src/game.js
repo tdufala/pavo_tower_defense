@@ -147,9 +147,14 @@ class Tower extends Phaser.GameObjects.Sprite {
 		//this.time = this.time.addEvent({delay: 0, repeat: 0});
 		this.timer = this.scene.time.addEvent({delay: 1, repeat: 0});
 		this.purch = 0;
+		
+		
+		this.radiusGraphics = this.scene.add.graphics();
     }
 
 	update() {
+		
+
 		if (!this.isOn){
 			if (this.cost <= player.gold){
 				this.setAlpha(1);
@@ -202,7 +207,9 @@ class Tower extends Phaser.GameObjects.Sprite {
 						gameObject.purch++;
 						gameObject.setPosition(pointerTileX * gameObject.scene.tileSize + gameObject.scene.tileSize/2, pointerTileY * gameObject.scene.tileSize + gameObject.scene.tileSize/2);
 						gameObject.isOn = true;
-						gameObject.disableInteractive();
+						gameObject.removeAllListeners('dragstart');
+						gameObject.removeAllListeners('drag');
+						gameObject.removeAllListeners('dragend');
 						if (gameObject.purch == 1){
 							player.gold -= gameObject.cost;
 							var newTower = new Tower(gameObject.scene, gameObject.startPos.x, gameObject.startPos.y, gameObject.name);
@@ -215,6 +222,9 @@ class Tower extends Phaser.GameObjects.Sprite {
 
 					}
 				});
+				
+				
+
 			}	else {
 				var pointerTileX = this.scene.map.worldToTileX(this.x);
 				var pointerTileY = this.scene.map.worldToTileY(this.y);
@@ -231,6 +241,7 @@ class Tower extends Phaser.GameObjects.Sprite {
 			if (!this.scene.towerGrid[this.pointer.x][this.pointer.y]){
 				this.scene.towerGrid[this.pointer.x][this.pointer.y] = true;
 			}
+
 
 			//get nearest enemy (if there are any)
 			var enemies = this.scene.enemyWaves.activeEnemies;
