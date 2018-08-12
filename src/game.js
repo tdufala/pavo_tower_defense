@@ -612,24 +612,27 @@ class LevelScene extends Phaser.Scene {
 
     // Add UI elements.
     buildUI() {
-        this.uiElements = this.add.group();
         // ---- UI elements ----
 
         // ++ Buttons ++
         // Back to start menu button
-        var menuTextButton = new Text(this, menuAnchors.topRight.x, menuAnchors.topRight.y, 'Return to Menu', { fontSize: '50px', color:'#00FF00', rtl: true}).setInteractive();
-        menuTextButton.on('pointerdown', function(event) {
+        // TODO: Make this a button, and more visually appealing
+        this.menuTextButton = new Text(this, menuAnchors.topRight.x, menuAnchors.topRight.y, 'Return to Menu', { fontSize: '50px', color:'#00FF00', rtl: true}).setInteractive();
+        this.menuTextButton.on('pointerdown', function(event) {
             this.scene.start('startMenu');
         }, this);
 
         // Button to start next wave.
-        var startWaveButton = new Button(this, menuAnchors.bottomLeft.x, menuAnchors.bottomLeft.y);
-        startWaveButton.x += startWaveButton.displayWidth / 2;
-        startWaveButton.y -= startWaveButton.displayHeight / 2;
-        startWaveButton.on('pointerdown', function(event) {
-            // Infinity signals game is won
+        // TODO: Make this more visually appealing
+        this.startWaveButton = new Button(this, menuAnchors.bottomLeft.x, menuAnchors.bottomLeft.y);
+        this.startWaveButton.x += this.startWaveButton.displayWidth / 2;
+        this.startWaveButton.y -= this.startWaveButton.displayHeight / 2;
+        this.startWaveButton.on('pointerdown', function(event) {
             this.enemyWaves.startNextWave()
         }, this);
+        // TODO: Add tower purchase pane
+        // TODO: Add selected tower info pane (with upgrade/sell buttons)
+
 
         // ++ Non-interactible indicators ++
         // Life counter
