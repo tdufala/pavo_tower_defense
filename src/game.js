@@ -147,9 +147,14 @@ class Tower extends Phaser.GameObjects.Sprite {
 		//this.time = this.time.addEvent({delay: 0, repeat: 0});
 		this.timer = this.scene.time.addEvent({delay: 1, repeat: 0});
 		this.purch = 0;
+		
+		
+		this.radiusGraphics = this.scene.add.graphics();
     }
 
 	update() {
+		
+
 		if (!this.isOn){
 			if (this.cost <= player.gold){
 				this.setAlpha(1);
@@ -168,7 +173,7 @@ class Tower extends Phaser.GameObjects.Sprite {
 					var pointerTileY = this.scene.map.worldToTileY(pointer.y);
 					var canPlace = false;
  					this.scene.towerPlaceable.findTile(function(tile){
-						if (tile.x == pointerTileX && tile.y == pointerTileY){
+						if (tile.x == pointerTileX && tile.y == pointerTileY && !gameObject.scene.towerGrid[pointerTileX][pointerTileY]){
 							if (tile.index == 1){
 								canPlace = true;
 							}
@@ -187,9 +192,9 @@ class Tower extends Phaser.GameObjects.Sprite {
 					var pointerTileX = this.scene.map.worldToTileX(pointer.x);
 					var pointerTileY = this.scene.map.worldToTileY(pointer.y);
 					var canPlace = false;
-					var towerTile;
+
 					this.scene.towerPlaceable.findTile(function(tile){
-						if (tile.x == pointerTileX && tile.y == pointerTileY){
+						if (tile.x == pointerTileX && tile.y == pointerTileY && !gameObject.scene.towerGrid[pointerTileX][pointerTileY]){
 							if (tile.index == 1){
 								canPlace = true;
 								return true;
@@ -200,20 +205,26 @@ class Tower extends Phaser.GameObjects.Sprite {
 					gameObject.marker.setAlpha(0);
 					if (canPlace){
 						gameObject.purch++;
-						gameObject.setPosition(pointerTileX * this.scene.tileSize + this.scene.tileSize/2, pointerTileY * this.scene.tileSize + this.scene.tileSize/2);
+						gameObject.setPosition(pointerTileX * gameObject.scene.tileSize + gameObject.scene.tileSize/2, pointerTileY * gameObject.scene.tileSize + gameObject.scene.tileSize/2);
 						gameObject.isOn = true;
-						gameObject.disableInteractive();
+						gameObject.removeAllListeners('dragstart');
+						gameObject.removeAllListeners('drag');
+						gameObject.removeAllListeners('dragend');
 						if (gameObject.purch == 1){
 							player.gold -= gameObject.cost;
 							var newTower = new Tower(gameObject.scene, gameObject.startPos.x, gameObject.startPos.y, gameObject.name);
 							player.towers.add(newTower,true);
 						}
+						gameObject.pointer = {'x': pointerTileX, 'y': pointerTileY};
 
 					} else {
 						gameObject.setPosition(gameObject.startPos.x, gameObject.startPos.y);
 
 					}
 				});
+				
+				
+
 			}	else {
 				var pointerTileX = this.scene.map.worldToTileX(this.x);
 				var pointerTileY = this.scene.map.worldToTileY(this.y);
@@ -227,6 +238,9 @@ class Tower extends Phaser.GameObjects.Sprite {
 			}
 		} else {
 			//projectile logic here
+			if (!this.scene.towerGrid[this.pointer.x][this.pointer.y]){
+				this.scene.towerGrid[this.pointer.x][this.pointer.y] = true;
+			}
 
 
 			//get nearest enemy (if there are any)
@@ -283,7 +297,7 @@ class Projectile extends Phaser.GameObjects.Sprite {
 			this.setActive(false);
 			this.setVisible(false);
 			this.destroy();
-		}else if (this.type == 'basic'){
+		}else if (this.type == 'basic' || this.type == 'splash'){
 			var angle = Math.atan((this.y - this.target.y) / (this.x - this.target.x));
 			var factor = 1;
 			if (this.x < this.target.x) factor = -1;
@@ -498,6 +512,8 @@ var gameOver = class extends Phaser.Scene {
 var victoryScene = class extends Phaser.Scene {
     constructor(str) {
         super('victory');
+		this.redirectTime = 5000; //time before redirecting in milliseconds
+		
     }
     preload() {
         this.load.image('defaultButton', 'assets/images/blue_button09.png');
@@ -507,7 +523,15 @@ var victoryScene = class extends Phaser.Scene {
         youWinText.setPosition(youWinText.x - youWinText.displayWidth, youWinText.y - youWinText.displayHeight);
         var finalGoldText = new Text(this, youWinText.x, youWinText.y + 100, "Final Gold: " + player.gold, normalFont);
         var finalLifeText = new Text(this, youWinText.x, youWinText.y + 200, "Final Lives: " + player.lives, normalFont);
+		this.timer = this.time.addEvent({delay: this.redirectTime, repeat: 0});
+		this.redirText = new Text(this, youWinText.x, youWinText.y + 300, "Redirecting in " + Math.round((1-this.timer.getProgress()) * this.redirectTime), normalFont);
     }
+	update(){
+		this.redirText.setText("Redirecting in " + Math.round((1-this.timer.getProgress()) * this.redirectTime / 1000));
+		if (this.timer.getProgress() == 1){
+			this.scene.start('startMenu');
+		}
+	}
 };
 
 
@@ -550,6 +574,10 @@ class LevelScene extends Phaser.Scene {
 		this.load.image('piercingTower', 'assets/images/piercingTower.png');
 		this.load.json('piercingProjectile', 'src/projectiles/piercingProjectile.json');
 		this.load.image('piercingProjectile', 'assets/images/piercingProjectile.png');
+		this.load.json('splashTower', 'src/towers/splashTower.json');
+		this.load.image('splashTower', 'assets/images/splashTower.png');
+		this.load.json('splashProjectile', 'src/projectiles/splashProjectile.json');
+		this.load.image('splashProjectile', 'assets/images/splashProjectile.png');
     }
 
     create() {
@@ -577,6 +605,9 @@ class LevelScene extends Phaser.Scene {
 
 		var piercingTower = new Tower(this, this.tileSize /2 + this.tileSize, this.mapHeight - this.tileSize/2, 'piercingTower');
 		player.towers.add(piercingTower, true);
+		
+		var splashTower = new Tower(this, this.tileSize /2 + 2 * this.tileSize, this.mapHeight - this.tileSize/2, 'splashTower');
+		player.towers.add(splashTower, true);
 
 		// ----- Projectiles -----
  		this.projectiles = this.add.group();
@@ -584,6 +615,15 @@ class LevelScene extends Phaser.Scene {
 
 	    // Add path for enemies on this level.
 	    this.path = new Phaser.Curves.Path();
+		
+		
+		this.towerGrid = new Array(this.mapWidth/this.tileSize);
+		for (var i = 0; i < this.towerGrid.length; i++){
+			this.towerGrid[i] = new Array(this.mapHeight/this.tileSize);
+			for (var j = 0; j < this.towerGrid[i].length; j++){
+				this.towerGrid[i][j] = false;
+			}
+		}
 
 
 		//create path for ground objects and initialize starting points
