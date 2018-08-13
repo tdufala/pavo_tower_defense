@@ -628,7 +628,9 @@ class LevelScene extends Phaser.Scene {
         startWaveButton.y -= startWaveButton.displayHeight / 2;
         startWaveButton.on('pointerdown', function(event) {
             // Infinity signals game is won
-            this.enemyWaves.startNextWave()
+            this.enemyWaves.startNextWave();
+            //create a save state to store after wave finishes
+            player.saveGame();
         }, this);
 
         // ++ Non-interactible indicators ++
@@ -863,13 +865,7 @@ class Player {
         // String representing the level the player is on - can be used for save states?
         this.levelName = levelName || null;
 
-        var saveObject ={
-            gold: this.gold;
-            lives: this.lives;
-            waveNum: this.waveNum;
-            towers: this.towers;
-            levelName: this.levelName;
-        }
+        
     }
 
     // TODO: Implement this function to load save states
@@ -891,11 +887,26 @@ class Player {
         // Use caution since these save files also track which level we're on.
         // Might need different save files for each level, with different file names for each?
       
+    //Cant get to work currently
+	//var saveObject ={
+            //gold: 3,
+            //lives: 5,
+            //waveNum: this.waveNum,
+            //towers: this.towers,
+            //levelName: this.levelName
+        //}
+
 	if (saveFileName === undefined){
             saveFileName = 'default';
         }
 
-        localStorage.setItem("save-" + saveFileName, JSON.stringify(saveObject));
+    localStorage.setItem("gold", this.gold);
+    localStorage.setItem("lives", this.lives);
+    
+    console.log(this.gold);
+    console.log(this.lives);
+    console.log(this.levelName);
+    console.log("Saving game.");
 
 	// var saveFileName = saveFileName || this.name;
        // return saveFileName;
