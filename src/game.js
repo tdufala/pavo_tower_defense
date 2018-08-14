@@ -441,6 +441,7 @@ var StartMenuScene = class extends Phaser.Scene {
         this.load.image('defaultButton', 'assets/images/blue_button09.png');
         this.load.image('blueCircle', 'assets/images/blue_circle.png');
         this.load.image('greenCircle', 'assets/images/green_circle.png');
+        this.load.audio('theme', 'assets/audio/battle.mp3');
         // Hack to load the Visitor font
         this.add.text(-Infinity, -Infinity, "Loading Visitor Font...", {font:"1px Visitor", fill: "#FFFFFF"}).destroy();
 
@@ -460,15 +461,22 @@ var StartMenuScene = class extends Phaser.Scene {
         // Use 'pointerover' for mouseover event. Use 'pointerout' for mouse-leave event. - can use setTexture to change texture, for instance.
         lvl1Start.on('pointerdown', function(event) {
             this.scene.start('level1');
+            themeSong.stop();
         }, this); // Start the main game.
 
         lvl2Start.on('pointerdown', function(event) {
             this.scene.start('level2');
+            themeSong.stop();
         }, this); // Start the main game.
 
         lvl3Start.on('pointerdown', function(event) {
             this.scene.start('level3');
+            themeSong.stop();
         }, this); // Start the main game.
+
+        var themeSong = this.sound.add('theme');
+    	themeSong.play();
+    	
     }
 };
 
