@@ -502,11 +502,15 @@ var gameOver = class extends Phaser.Scene {
 	preload(){
 		this.load.image('gameOver', 'assets/images/game_over.png');
 		this.load.image('defaultButton', 'assets/images/blue_button09.png');
+		this.load.audio('GameOver', 'assets/audio/GameOver.mp3')
 	}
 
 	create(){
 		var background = this.add.image(672,448,'gameOver');
 		background.setScale(0.7);
+
+		var gameOverSound = this.sound.add('GameOver');
+		gameOverSound.play();
 
 		 // ---- UI elements ----
         var startMenuText = new Text(this, menuAnchors.topRight.x, menuAnchors.topRight.y, 'Return to Menu', { fontSize: '49pt', color:'#00FF00', rtl: true}).setInteractive();
