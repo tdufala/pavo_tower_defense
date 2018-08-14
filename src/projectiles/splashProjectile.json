@@ -1,0 +1,7 @@
+{
+	"name" : "splashProjectile",
+	"speed" : 5,
+	"damage" : 50,
+	"image" : "splashProjectile.png",
+	"type" : "splash"
+}
