@@ -152,6 +152,7 @@ class Tower extends Phaser.GameObjects.Sprite {
 		this.radiusGraphics = this.scene.add.graphics();
     }
 
+
 	update() {
 		
 
@@ -291,6 +292,13 @@ class Projectile extends Phaser.GameObjects.Sprite {
 
     }
 
+    //preload(){
+    //	this.load.audio('laser1', 'assets/audio/laser1.mp3');
+    //}
+
+    //create(){
+    //	var laser1 = this.sound.add('laser1');
+    //}
 
     update() {
 		if (this.y < -50 || this.y > this.scene.mapHeight + 50 || this.x < -50 || this.x > this.scene.mapWidth + 50) {
@@ -300,6 +308,7 @@ class Projectile extends Phaser.GameObjects.Sprite {
 		}else if (this.type == 'basic' || this.type == 'splash'){
 			var angle = Math.atan((this.y - this.target.y) / (this.x - this.target.x));
 			var factor = 1;
+
 			if (this.x < this.target.x) factor = -1;
 			this.y -= this.speed * Math.sin(angle)* factor;
 			this.x -= this.speed * Math.cos(angle) * factor;
@@ -372,6 +381,7 @@ class Enemy extends Phaser.GameObjects.PathFollower {
         this.setActive(false);
         this.setVisible(false);
     }
+
 
     // Sets up timers to spawn the unit
     spawn() {
@@ -529,8 +539,12 @@ var victoryScene = class extends Phaser.Scene {
     }
     preload() {
         this.load.image('defaultButton', 'assets/images/blue_button09.png');
+        this.load.audio('GameWin', 'assets/audio/GameWon.mp3');
     }
     create() {
+    	var gameWonJingle = this.sound.add('GameWin');
+    	gameWonJingle.play();
+
         var youWinText = new Text(this, canvasAnchors.middle.x, canvasAnchors.middle.y - 200, "You win", normalFont);
         youWinText.setPosition(youWinText.x - youWinText.displayWidth, youWinText.y - youWinText.displayHeight);
         var finalGoldText = new Text(this, youWinText.x, youWinText.y + 100, "Final Gold: " + player.gold, normalFont);
@@ -605,6 +619,7 @@ class LevelScene extends Phaser.Scene {
         // TODO: Test purposes only. If we implement save states, this should be refactored.
         // Calling Player(name, gold, lives, waveNum, towers, levelName) - taking defaults for most
         player = new Player(null, null, null, null, this.levelName);
+
 
 		// ----- Towers -----
 		player.towers = this.add.group({
