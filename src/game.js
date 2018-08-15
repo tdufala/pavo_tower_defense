@@ -152,6 +152,7 @@ class Tower extends Phaser.GameObjects.Sprite {
 		this.radiusGraphics = this.scene.add.graphics();
     }
 
+
 	update() {
 		
 
@@ -291,6 +292,13 @@ class Projectile extends Phaser.GameObjects.Sprite {
 
     }
 
+    //preload(){
+    //	this.load.audio('laser1', 'assets/audio/laser1.mp3');
+    //}
+
+    //create(){
+    //	var laser1 = this.sound.add('laser1');
+    //}
 
     update() {
 		if (this.y < -50 || this.y > this.scene.mapHeight + 50 || this.x < -50 || this.x > this.scene.mapWidth + 50) {
@@ -300,6 +308,7 @@ class Projectile extends Phaser.GameObjects.Sprite {
 		}else if (this.type == 'basic' || this.type == 'splash'){
 			var angle = Math.atan((this.y - this.target.y) / (this.x - this.target.x));
 			var factor = 1;
+
 			if (this.x < this.target.x) factor = -1;
 			this.y -= this.speed * Math.sin(angle)* factor;
 			this.x -= this.speed * Math.cos(angle) * factor;
@@ -372,6 +381,7 @@ class Enemy extends Phaser.GameObjects.PathFollower {
         this.setActive(false);
         this.setVisible(false);
     }
+
 
     // Sets up timers to spawn the unit
     spawn() {
@@ -455,6 +465,7 @@ var StartMenuScene = class extends Phaser.Scene {
         this.load.image('defaultButton', 'assets/images/blue_button09.png');
         this.load.image('blueCircle', 'assets/images/blue_circle.png');
         this.load.image('greenCircle', 'assets/images/green_circle.png');
+        this.load.audio('theme', 'assets/audio/battle.mp3');
         // Hack to load the Visitor font
         this.add.text(-Infinity, -Infinity, "Loading Visitor Font...", {font:"1px Visitor", fill: "#FFFFFF"}).destroy();
 
@@ -474,15 +485,22 @@ var StartMenuScene = class extends Phaser.Scene {
         // Use 'pointerover' for mouseover event. Use 'pointerout' for mouse-leave event. - can use setTexture to change texture, for instance.
         lvl1Start.on('pointerdown', function(event) {
             this.scene.start('level1');
+            themeSong.stop();
         }, this); // Start the main game.
 
         lvl2Start.on('pointerdown', function(event) {
             this.scene.start('level2');
+            themeSong.stop();
         }, this); // Start the main game.
 
         lvl3Start.on('pointerdown', function(event) {
             this.scene.start('level3');
+            themeSong.stop();
         }, this); // Start the main game.
+
+        var themeSong = this.sound.add('theme');
+    	themeSong.play();
+    	
     }
 };
 
@@ -494,11 +512,15 @@ var gameOver = class extends Phaser.Scene {
 	preload(){
 		this.load.image('gameOver', 'assets/images/game_over.png');
 		this.load.image('defaultButton', 'assets/images/blue_button09.png');
+		this.load.audio('GameOver', 'assets/audio/GameOver.mp3')
 	}
 
 	create(){
 		var background = this.add.image(672,448,'gameOver');
 		background.setScale(0.7);
+
+		var gameOverSound = this.sound.add('GameOver');
+		gameOverSound.play();
 
 		 // ---- UI elements ----
         var startMenuText = new Text(this, menuAnchors.topRight.x, menuAnchors.topRight.y, 'Return to Menu', { fontSize: '49pt', color:'#00FF00', rtl: true}).setInteractive();
@@ -517,8 +539,12 @@ var victoryScene = class extends Phaser.Scene {
     }
     preload() {
         this.load.image('defaultButton', 'assets/images/blue_button09.png');
+        this.load.audio('GameWin', 'assets/audio/GameWon.mp3');
     }
     create() {
+    	var gameWonJingle = this.sound.add('GameWin');
+    	gameWonJingle.play();
+
         var youWinText = new Text(this, canvasAnchors.middle.x, canvasAnchors.middle.y - 200, "You win", normalFont);
         youWinText.setPosition(youWinText.x - youWinText.displayWidth, youWinText.y - youWinText.displayHeight);
         var finalGoldText = new Text(this, youWinText.x, youWinText.y + 100, "Final Gold: " + player.gold, normalFont);
@@ -593,6 +619,7 @@ class LevelScene extends Phaser.Scene {
         // TODO: Test purposes only. If we implement save states, this should be refactored.
         // Calling Player(name, gold, lives, waveNum, towers, levelName) - taking defaults for most
         player = new Player(null, null, null, null, this.levelName);
+
 
 		// ----- Towers -----
 		player.towers = this.add.group({
@@ -669,6 +696,7 @@ class LevelScene extends Phaser.Scene {
         this.startWaveButton.y -= this.startWaveButton.displayHeight / 2;
         this.startWaveButton.on('pointerdown', function(event) {
             this.enemyWaves.startNextWave()
+            player.saveGame();
         }, this);
         // TODO: Add tower purchase pane
         // TODO: Add selected tower info pane (with upgrade/sell buttons)
@@ -906,6 +934,7 @@ class Player {
         // String representing the level the player is on - can be used for save states?
         this.levelName = levelName || null;
 
+        
     }
 
     // TODO: Implement this function to load save states
@@ -914,13 +943,42 @@ class Player {
         // Could add parameters, or use globals
         // We should be able to use localStorage for save states, but have to be careful of
         // running the game in multiple tabs causing race conditions (leading to corruption) when we write to storage.
+
+	if (saveFileName === undefined){
+            saveFileName = 'default'
+        }
+
+        localStorage.getItem("save-" + saveFileName);
+
     }
     saveGame(saveFileName) {
         // If no saveFileName provided, use player name?
         // Use caution since these save files also track which level we're on.
         // Might need different save files for each level, with different file names for each?
-        var saveFileName = saveFileName || this.name;
-        return saveFileName;
+      
+    //Cant get to work currently
+	//var saveObject ={
+            //gold: 3,
+            //lives: 5,
+            //waveNum: this.waveNum,
+            //towers: this.towers,
+            //levelName: this.levelName
+        //}
+
+	if (saveFileName === undefined){
+            saveFileName = 'default';
+        }
+
+    localStorage.setItem("gold", this.gold);
+    localStorage.setItem("lives", this.lives);
+    
+    console.log(this.gold);
+    console.log(this.lives);
+    console.log(this.levelName);
+    console.log("Saving game.");
+
+	// var saveFileName = saveFileName || this.name;
+       // return saveFileName;
     }
 
 
