@@ -163,9 +163,6 @@ class Tower extends Phaser.GameObjects.Sprite {
 
 		if (!this.isOn){
 			if (this.cost <= player.gold){
-				if (this.name == 'splashTower'){
-					console.log(this.cost + " " + player.gold);
-				}
 				this.setAlpha(1);
 				this.marker.lineStyle(1, 0x7CFC00, 1);
 				this.marker.strokeRect(0, 0, this.scene.tileSize, this.scene.tileSize);
