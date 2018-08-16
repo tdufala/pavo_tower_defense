@@ -8,6 +8,11 @@ import css from './stylesheets/main.css'
 // ======== Globals ========
 var game;
 var player;
+
+//--------- CHANGE TO 1 AFTER TESTING ----------------
+var levelUnlocked = 3;
+
+
 var scenes = [];
 var config = {
     type: Phaser.AUTO,
@@ -294,6 +299,7 @@ class Projectile extends Phaser.GameObjects.Sprite {
 			//set the splash radius
 			this.splashRadius = 200;
 			this.detonated = false;
+			this.splashFactor = 0.6;
 		}
 
     }
@@ -312,30 +318,34 @@ class Projectile extends Phaser.GameObjects.Sprite {
 			this.setVisible(false);
 			this.destroy();
 		}else if (this.type == 'splash' && !this.detonated){
-			var angle = Math.atan((this.y - this.target.y) / (this.x - this.target.x));
-			var factor = 1;
+			if (this.target){
+				var angle = Math.atan((this.y - this.target.y) / (this.x - this.target.x));
+				var factor = 1;
 
-			if (this.x < this.target.x) factor = -1;
-			this.y -= this.speed * Math.sin(angle)* factor;
-			this.x -= this.speed * Math.cos(angle) * factor;
+				if (this.x < this.target.x) factor = -1;
+				this.y -= this.speed * Math.sin(angle)* factor;
+				this.x -= this.speed * Math.cos(angle) * factor;
 
-			var dist = Math.hypot(this.y - this.target.y, this.x - this.target.x);
-			if(dist <= this.scene.tileSize/2){
-				this.detonated = true;
-				this.target.hp -= this.damage;
-				this.splashGraphics = this.scene.add.graphics();
-				this.splashGraphics.fillStyle(0xFFF200, 0.3);
-				this.splashGraphics.fillCircle(this.x, this.y, this.splashRadius);
-				this.scene.time.delayedCall(50, function(){
-					this.splashGraphics.destroy();
-					}, [], this);
-				var enemies = this.scene.enemyWaves.activeEnemies;
-				for (let i = 0; i < enemies.length; i++){
-					var dist = Math.hypot(this.y - enemies[i].y, this.x - enemies[i].x);
-					if(dist <= this.splashRadius && enemies[i] != this.target){
-						enemies[i].hp -= this.damage;
+				var dist = Math.hypot(this.y - this.target.y, this.x - this.target.x);
+				if(dist <= this.scene.tileSize/2){
+					this.detonated = true;
+					this.target.hp -= this.damage;
+					this.splashGraphics = this.scene.add.graphics();
+					this.splashGraphics.fillStyle(0xFFF200, 0.3);
+					this.splashGraphics.fillCircle(this.x, this.y, this.splashRadius);
+					this.scene.time.delayedCall(50, function(){
+						this.splashGraphics.destroy();
+						}, [], this);
+					var enemies = this.scene.enemyWaves.activeEnemies;
+					for (let i = 0; i < enemies.length; i++){
+						var dist = Math.hypot(this.y - enemies[i].y, this.x - enemies[i].x);
+						if(dist <= this.splashRadius && enemies[i] != this.target){
+							enemies[i].hp -= this.damage * this.splashFactor;
+						}
 					}
+					this.destroy();
 				}
+			} else {
 				this.destroy();
 			}
 
@@ -356,17 +366,21 @@ class Projectile extends Phaser.GameObjects.Sprite {
 			}
 
 		} else {
-			//default to basic projectile logic
-			var angle = Math.atan((this.y - this.target.y) / (this.x - this.target.x));
-			var factor = 1;
+			if (this.target){
+				//default to basic projectile logic
+				var angle = Math.atan((this.y - this.target.y) / (this.x - this.target.x));
+				var factor = 1;
 
-			if (this.x < this.target.x) factor = -1;
-			this.y -= this.speed * Math.sin(angle)* factor;
-			this.x -= this.speed * Math.cos(angle) * factor;
+				if (this.x < this.target.x) factor = -1;
+				this.y -= this.speed * Math.sin(angle)* factor;
+				this.x -= this.speed * Math.cos(angle) * factor;
 
-			var dist = Math.hypot(this.y - this.target.y, this.x - this.target.x);
-			if(dist <= this.scene.tileSize/2){
-				this.target.hp -= this.damage;
+				var dist = Math.hypot(this.y - this.target.y, this.x - this.target.x);
+				if(dist <= this.scene.tileSize/2){
+					this.target.hp -= this.damage;
+					this.destroy();
+				}
+			} else {
 				this.destroy();
 			}
 		}
@@ -508,27 +522,27 @@ var StartMenuScene = class extends Phaser.Scene {
 
     create() {
         var startMenuText = new Text(this, 75, 75, 'Start Menu', { fontSize: '49pt', color:'#0000FF'});
-        var level1Text = new Text(this, 75, 200, 'Level 1', { fontSize: '50px', color:'#00FF00' });
-        var level2Text = new Text(this, 75, 300, 'Level 2', { fontSize: '50px', color:'#00FF00' });
-        var level3Text = new Text(this, 75, 400, 'Level 3', { fontSize: '50px', color:'#00FF00' });
+        this.level1Text = new Text(this, 75, 200, 'Level 1', { fontSize: '50px', color:'#00FF00' });
+        this.level2Text = new Text(this, 75, 300, 'Level 2', { fontSize: '50px', color:'#00FF00' });
+        this.level3Text = new Text(this, 75, 400, 'Level 3', { fontSize: '50px', color:'#00FF00' });
         // Start Button
-        var lvl1Start = new Button(this, this.sys.canvas.width - 125, 225);
+        this.lvl1Start = new Button(this, this.sys.canvas.width - 125, 225);
 
-        var lvl2Start = new Button(this, this.sys.canvas.width - 125, 325);
+        this.lvl2Start = new Button(this, this.sys.canvas.width - 125, 325);
 
-        var lvl3Start = new Button(this, this.sys.canvas.width - 125, 425);
+        this.lvl3Start = new Button(this, this.sys.canvas.width - 125, 425);
         // Use 'pointerover' for mouseover event. Use 'pointerout' for mouse-leave event. - can use setTexture to change texture, for instance.
-        lvl1Start.on('pointerdown', function(event) {
+        this.lvl1Start.on('pointerdown', function(event) {
             this.scene.start('level1');
             themeSong.stop();
         }, this); // Start the main game.
 
-        lvl2Start.on('pointerdown', function(event) {
+        this.lvl2Start.on('pointerdown', function(event) {
             this.scene.start('level2');
             themeSong.stop();
         }, this); // Start the main game.
 
-        lvl3Start.on('pointerdown', function(event) {
+        this.lvl3Start.on('pointerdown', function(event) {
             this.scene.start('level3');
             themeSong.stop();
         }, this); // Start the main game.
@@ -537,6 +551,24 @@ var StartMenuScene = class extends Phaser.Scene {
     	themeSong.play();
     	
     }
+	
+	update(){
+		if (levelUnlocked == 1){
+			this.lvl2Start.setActive(false);
+			this.lvl2Start.setVisible(false);
+			this.lvl3Start.setActive(false);
+			this.lvl3Start.setVisible(false);
+		} else if (levelUnlocked == 2){
+			this.lvl2Start.setActive(true);
+			this.lvl2Start.setVisible(true);
+			this.lvl3Start.setActive(false);
+			this.lvl3Start.setVisible(false);
+		} else {
+			this.lvl3Start.setActive(true);
+			this.lvl3Start.setVisible(true);
+		}
+		
+	}
 };
 
 
@@ -639,6 +671,8 @@ class LevelScene extends Phaser.Scene {
 		this.load.image('splashTower', 'assets/images/splashTower.png');
 		this.load.json('splashProjectile', 'src/projectiles/splashProjectile.json');
 		this.load.image('splashProjectile', 'assets/images/splashProjectile.png');
+		
+	
     }
 
     create() {
@@ -752,6 +786,7 @@ class LevelScene extends Phaser.Scene {
         // Check for game won
         if(this.enemyWaves.gameWon()) {
             this.scene.start('victory');
+			levelUnlocked = parseInt(this.levelName[this.levelName.length - 1], 10) + 1;
         }
 
 		this.liveText.setText('Lives: ' + player.lives);
@@ -967,7 +1002,6 @@ class Player {
         // String representing the level the player is on - can be used for save states?
         this.levelName = levelName || null;
 
-        
     }
 
     // TODO: Implement this function to load save states
