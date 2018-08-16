@@ -653,6 +653,9 @@ class LevelScene extends Phaser.Scene {
     preload() {
         // Load common assets
         this.load.image('defaultButton', 'assets/images/blue_button09.png');
+		this.load.image('defaultButtondown', 'assets/images/blue_button09.png');
+		this.load.image('longButton', 'assets/images/green_button00.png');
+		this.load.image('longButtondown', 'assets/images/green_button02.png');
         this.load.image('gameTiles', 'assets/spritesheets/minimalTilesTowers.png', { frameWidth: 64, frameHeight: 64});
         this.load.tilemapTiledJSON(this.levelName, 'src/maps/' + this.levelName + '.json');
         this.load.json('waveFile' + this.levelName, this.waveFile);
@@ -760,15 +763,18 @@ class LevelScene extends Phaser.Scene {
         }, this);
 
         // Button to start next wave.
-        var startWaveButton = new Button(this, menuAnchors.bottomLeft.x, menuAnchors.bottomLeft.y);
+        var startWaveButton = new Button(this, menuAnchors.bottomLeft.x, menuAnchors.bottomLeft.y, 'longButton');
         startWaveButton.x += startWaveButton.displayWidth / 2;
         startWaveButton.y -= startWaveButton.displayHeight / 2;
-        startWaveButton.on('pointerdown', function(event) {
+        startWaveButton.setFunc(function(context) {
             // Infinity signals game is won
-            this.enemyWaves.startNextWave();
-            //create a save state to store after wave finishes
+            context.enemyWaves.startNextWave();
+            //create a save state to store after wave finishes	
             player.saveGame();
-        }, this);
+        });
+		
+		var startWaveText = new Text(this, startWaveButton.x-55, startWaveButton.y-10, 'Start Wave', { fontSize: '20px', color:'#FFFFFF' });
+		startWaveText.setOrigin(0,0);
 
         // ++ Non-interactible indicators ++
         // Life counter
@@ -1074,6 +1080,11 @@ class Button extends Phaser.GameObjects.Sprite {
 		
 		this.on('pointerout', function(event){
 			this.setTexture(this.key);
+		});
+		
+		this.on('pointerover', function(pointer){
+			if (pointer.isDown)
+				this.setTexture(this.onBtnDown);
 		});
     }
 	
