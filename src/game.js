@@ -240,6 +240,7 @@ class Tower extends Phaser.GameObjects.Sprite {
 				this.marker.strokeRect(0, 0, this.scene.tileSize, this.scene.tileSize);
 				this.marker.setAlpha(1);
 				this.setAlpha(0.5);
+				this.disableInteractive();
 
 			}
 		} else {
