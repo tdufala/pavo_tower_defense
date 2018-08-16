@@ -512,6 +512,7 @@ var StartMenuScene = class extends Phaser.Scene {
 
     preload() {
         this.load.image('defaultButton', 'assets/images/blue_button09.png');
+		this.load.image('defaultButtondown', 'assets/images/blue_button08.png')
         this.load.image('blueCircle', 'assets/images/blue_circle.png');
         this.load.image('greenCircle', 'assets/images/green_circle.png');
         this.load.audio('theme', 'assets/audio/battle.mp3');
@@ -532,20 +533,20 @@ var StartMenuScene = class extends Phaser.Scene {
 
         this.lvl3Start = new Button(this, this.sys.canvas.width - 125, 425);
         // Use 'pointerover' for mouseover event. Use 'pointerout' for mouse-leave event. - can use setTexture to change texture, for instance.
-        this.lvl1Start.on('pointerdown', function(event) {
-            this.scene.start('level1');
+        this.lvl1Start.setFunc(function(context) {
+            context.scene.start('level1');
             themeSong.stop();
-        }, this); // Start the main game.
+        }); // Start the main game.
 
-        this.lvl2Start.on('pointerdown', function(event) {
-            this.scene.start('level2');
+        this.lvl2Start.setFunc(function(context) {
+            context.scene.start('level2');
             themeSong.stop();
-        }, this); // Start the main game.
+        }); // Start the main game.
 
-        this.lvl3Start.on('pointerdown', function(event) {
-            this.scene.start('level3');
+        this.lvl3Start.setFunc(function(context) {
+            context.scene.start('level3');
             themeSong.stop();
-        }, this); // Start the main game.
+        }); // Start the main game.
 
         var themeSong = this.sound.add('theme');
     	themeSong.play();
@@ -1064,7 +1065,24 @@ class Button extends Phaser.GameObjects.Sprite {
             scene.sys.updateList.add(this);
         }
         this.setInteractive();
+		this.onBtnDown = texture + 'down';
+		this.scene = scene;
+		this.key = texture;
+		this.on('pointerdown', function(event){
+			this.setTexture(this.onBtnDown);
+		});
+		
+		this.on('pointerout', function(event){
+			this.setTexture(this.key);
+		});
     }
+	
+	setFunc(func){
+		this.on('pointerup', function(event){
+			this.setTexture(this.key);
+			func(this.scene);
+		});
+	}
 }
 // =========  class ========
 // Used to add game text with some common defaults
