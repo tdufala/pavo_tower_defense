@@ -289,6 +289,12 @@ class Projectile extends Phaser.GameObjects.Sprite {
 			//timer used to make sure bullet doesn't inflict damage on same enemy twice
 			this.timer = this.scene.time.addEvent({delay: 100, repeat: 0});
 		}
+		
+		if (this.type == 'splash'){
+			//set the splash radius
+			this.splashRadius = 200;
+			this.detonated = false;
+		}
 
     }
 
@@ -305,7 +311,7 @@ class Projectile extends Phaser.GameObjects.Sprite {
 			this.setActive(false);
 			this.setVisible(false);
 			this.destroy();
-		}else if (this.type == 'basic' || this.type == 'splash'){
+		}else if (this.type == 'splash' && !this.detonated){
 			var angle = Math.atan((this.y - this.target.y) / (this.x - this.target.x));
 			var factor = 1;
 
@@ -315,9 +321,24 @@ class Projectile extends Phaser.GameObjects.Sprite {
 
 			var dist = Math.hypot(this.y - this.target.y, this.x - this.target.x);
 			if(dist <= this.scene.tileSize/2){
+				this.detonated = true;
 				this.target.hp -= this.damage;
+				this.splashGraphics = this.scene.add.graphics();
+				this.splashGraphics.fillStyle(0xFFF200, 0.3);
+				this.splashGraphics.fillCircle(this.x, this.y, this.splashRadius);
+				this.scene.time.delayedCall(50, function(){
+					this.splashGraphics.destroy();
+					}, [], this);
+				var enemies = this.scene.enemyWaves.activeEnemies;
+				for (let i = 0; i < enemies.length; i++){
+					var dist = Math.hypot(this.y - enemies[i].y, this.x - enemies[i].x);
+					if(dist <= this.splashRadius && enemies[i] != this.target){
+						enemies[i].hp -= this.damage;
+					}
+				}
 				this.destroy();
 			}
+
 		} else if (this.type == 'piercing'){
 			var angle = this.targetAngle;
 
@@ -334,6 +355,20 @@ class Projectile extends Phaser.GameObjects.Sprite {
 				}
 			}
 
+		} else {
+			//default to basic projectile logic
+			var angle = Math.atan((this.y - this.target.y) / (this.x - this.target.x));
+			var factor = 1;
+
+			if (this.x < this.target.x) factor = -1;
+			this.y -= this.speed * Math.sin(angle)* factor;
+			this.x -= this.speed * Math.cos(angle) * factor;
+
+			var dist = Math.hypot(this.y - this.target.y, this.x - this.target.x);
+			if(dist <= this.scene.tileSize/2){
+				this.target.hp -= this.damage;
+				this.destroy();
+			}
 		}
     }
 };
