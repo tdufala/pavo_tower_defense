@@ -139,6 +139,8 @@ class Tower extends Phaser.GameObjects.Sprite {
 
 		//projectile to use for this tower
 		this.projectile = config.projectile;
+		
+		this.type = config.name;
 
 		//marker used for tower
 		this.marker = this.scene.add.graphics();
@@ -156,8 +158,11 @@ class Tower extends Phaser.GameObjects.Sprite {
 		this.timer = this.scene.time.addEvent({delay: 1, repeat: 0});
 		this.purch = 0;
 		
+		this.damage = config.damage;
 		
 		this.radiusGraphics = this.scene.add.graphics();
+		
+		this.towerText = new Text(scene,this.x - this.scene.tileSize/2 + 5, this.y - this.scene.tileSize - 55, "", {fontSize: '20px', color:'#FFFFFF'});
     }
 
 
@@ -175,6 +180,8 @@ class Tower extends Phaser.GameObjects.Sprite {
 				this.isDraggable = true;
 				this.scene.input.on('dragstart', function (pointer, gameObject) {
 					gameObject.setAlpha(0.5);
+					gameObject.radiusGraphics.clear();
+					gameObject.towerText.setText("");
 				});
 				this.scene.input.on('drag', function (pointer, gameObject, dragX, dragY) {
 					gameObject.setPosition(dragX, dragY);
@@ -194,8 +201,12 @@ class Tower extends Phaser.GameObjects.Sprite {
 						gameObject.marker.x = this.scene.map.tileToWorldX(pointerTileX);
 						gameObject.marker.y = this.scene.map.tileToWorldY(pointerTileY);
 					}
+					gameObject.radiusGraphics.clear();
+					gameObject.radiusGraphics.lineStyle(1, "0xFFFFFF", 1);
+					gameObject.radiusGraphics.strokeCircle(dragX, dragY, gameObject.radius);
 				});
 				this.scene.input.on('dragend', function(pointer, gameObject) {
+					gameObject.radiusGraphics.clear();
 					gameObject.setAlpha(1);
 					// Snap to tile coordinates, but in world space
 					var pointerTileX = this.scene.map.worldToTileX(pointer.x);
@@ -216,13 +227,20 @@ class Tower extends Phaser.GameObjects.Sprite {
 						gameObject.purch++;
 						gameObject.setPosition(pointerTileX * gameObject.scene.tileSize + gameObject.scene.tileSize/2, pointerTileY * gameObject.scene.tileSize + gameObject.scene.tileSize/2);
 						gameObject.isOn = true;
-						gameObject.removeAllListeners('dragstart');
-						gameObject.removeAllListeners('drag');
-						gameObject.removeAllListeners('dragend');
+						gameObject.radiusGraphics.clear();
 						if (gameObject.purch == 1){
 							player.gold -= gameObject.cost;
 							var newTower = new Tower(gameObject.scene, gameObject.startPos.x, gameObject.startPos.y, gameObject.name);
 							player.towers.add(newTower,true);
+							gameObject.towerText.destroy();
+							gameObject.removeAllListeners();
+							gameObject.on('pointerover', function(pointer){
+								gameObject.radiusGraphics.lineStyle(1, 0xFFFFFF, 1);
+								gameObject.radiusGraphics.strokeCircle(gameObject.x, gameObject.y, gameObject.radius);
+							});
+							gameObject.on('pointerout', function(pointer){
+								gameObject.radiusGraphics.clear();
+							});
 						}
 						gameObject.pointer = {'x': pointerTileX, 'y': pointerTileY};
 
@@ -246,6 +264,24 @@ class Tower extends Phaser.GameObjects.Sprite {
 				this.disableInteractive();
 
 			}
+			
+			this.on('pointerover', function(pointer){
+				var specText = "Cost: " + this.cost + "\nDamage: " + this.damage + "\nFire-rate: " + 1/(this.bullet_delay / 1000) + " shots/s\n";
+				if (this.type == 'basicTower'){
+					specText += 'Basic tower: single target homing projectiles';
+				} else if (this.type == 'piercingTower'){
+					specText += 'Piercing tower: shoots a bullet that travels through \nfirst detected enemy and damages all enemies it passes through';
+				} else {
+					specText += 'Splash tower: shoots a bullet that explodes upon \nreaching its target (first detected enemy)';
+				}
+				this.towerText.setText(specText);
+				this.radiusGraphics.lineStyle(1, 0xFFFFFF, 1);
+				this.radiusGraphics.strokeCircle(this.x, this.y, this.radius);
+			});
+			this.on('pointerout', function(pointer){
+				this.towerText.setText("");
+				this.radiusGraphics.clear();
+			});
 		} else {
 			//projectile logic here
 			if (!this.scene.towerGrid[this.pointer.x][this.pointer.y]){
@@ -267,7 +303,7 @@ class Tower extends Phaser.GameObjects.Sprite {
 				}
 				//if nearest enemy is within detection radius, shoot
 				if (nearestEnemy.dist <= this.radius  && this.timer.getProgress() == 1 ){
-					var projectile = new Projectile(this.scene, this.x, this.y, this.projectile, null, enemies[nearestEnemy.index]);
+					var projectile = new Projectile(this.scene, this.x, this.y, this.projectile, this.damage, enemies[nearestEnemy.index]);
 					this.scene.projectiles.add(projectile, true);
  					this.timer.destroy();
 					this.timer = this.scene.time.addEvent({delay: this.bullet_delay, repeat: 0});
@@ -289,7 +325,7 @@ class Projectile extends Phaser.GameObjects.Sprite {
 		var config = scene.cache.json.get(name);
         this.speed = config.speed;
 		this.scene = scene;
-		this.damage = damage || config.damage;
+		this.damage = damage;
 		this.target = target;
 		this.type = config.type;
 		if (this.type == 'piercing'){
@@ -703,15 +739,20 @@ class LevelScene extends Phaser.Scene {
 			runChildUpdate : true
 		});
 
+		
 		//bottom right 5 tiles used for tower placement
 		var basicTower = new Tower(this, this.tileSize / 2, this.mapHeight - this.tileSize/2, 'basicTower' );
 		player.towers.add(basicTower, true);
+		
 
 		var piercingTower = new Tower(this, this.tileSize /2 + this.tileSize, this.mapHeight - this.tileSize/2, 'piercingTower');
 		player.towers.add(piercingTower, true);
 		
 		var splashTower = new Tower(this, this.tileSize /2 + 2 * this.tileSize, this.mapHeight - this.tileSize/2, 'splashTower');
 		player.towers.add(splashTower, true);
+		
+		
+		
 
 		// ----- Projectiles -----
  		this.projectiles = this.add.group();
