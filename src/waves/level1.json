@@ -11,7 +11,7 @@
     [
         {
             "enemyType": "normalEnemy",
-            "enemyCount": 25
+            "enemyCount": 10
         }
     ], [
         {

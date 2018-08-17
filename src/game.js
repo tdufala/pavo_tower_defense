@@ -144,7 +144,7 @@ class Tower extends Phaser.GameObjects.Sprite {
 
 		//projectile to use for this tower
 		this.projectile = config.projectile;
-		
+
 		this.type = config.name;
 
 		//marker used for tower
@@ -162,17 +162,17 @@ class Tower extends Phaser.GameObjects.Sprite {
 		//this.time = this.time.addEvent({delay: 0, repeat: 0});
 		this.timer = this.scene.time.addEvent({delay: 1, repeat: 0});
 		this.purch = 0;
-		
+
 		this.damage = config.damage;
-		
+
 		this.radiusGraphics = this.scene.add.graphics();
-		
+
 		this.towerText = new Text(scene,this.x - this.scene.tileSize/2 + 5, this.y - this.scene.tileSize - 55, "", {fontSize: '20px', color:'#FFFFFF'});
     }
 
 
 	update() {
-		
+
 
 		if (!this.isOn){
 			if (this.cost <= player.gold){
@@ -254,8 +254,8 @@ class Tower extends Phaser.GameObjects.Sprite {
 
 					}
 				});
-				
-				
+
+
 
 			}	else {
 				var pointerTileX = this.scene.map.worldToTileX(this.x);
@@ -269,9 +269,9 @@ class Tower extends Phaser.GameObjects.Sprite {
 				this.disableInteractive();
 
 			}
-			
+
 			this.on('pointerover', function(pointer){
-				var specText = "Cost: " + this.cost + "\nDamage: " + this.damage + "\nFire-rate: " + 1/(this.bullet_delay / 1000) + " shots/s\n";
+				var specText = "Cost: " + this.cost + "\nDamage: " + this.damage + "\nFire-rate: " + 1/(this.bullet_delay / 1000) + " shots/sec\n";
 				if (this.type == 'basicTower'){
 					specText += 'Basic tower: single target homing projectiles';
 				} else if (this.type == 'piercingTower'){
@@ -308,7 +308,7 @@ class Tower extends Phaser.GameObjects.Sprite {
 				}
 				//if nearest enemy is within detection radius, shoot
 				if (nearestEnemy.dist <= this.radius  && this.timer.getProgress() == 1 ){
-					var projectile = new Projectile(this.scene, this.x, this.y, this.projectile, this.damage, enemies[nearestEnemy.index]);
+					var projectile = new Projectile(this.scene, this.x, this.y, this, enemies[nearestEnemy.index]);
 					this.scene.projectiles.add(projectile, true);
  					this.timer.destroy();
 					this.timer = this.scene.time.addEvent({delay: this.bullet_delay, repeat: 0});
@@ -325,26 +325,36 @@ class Tower extends Phaser.GameObjects.Sprite {
 // Based on http://www.html5gamedevs.com/topic/36169-rotate-bullets-position-in-rotation-of-gun/
 // TODO: Implement this according to what makes sense for us.
 class Projectile extends Phaser.GameObjects.Sprite {
-    constructor(scene, x, y, name, damage, target) {
-        super(scene, x, y, name);
-		var config = scene.cache.json.get(name);
-        this.speed = config.speed;
-		this.scene = scene;
-		this.damage = damage;
-		this.target = target;
+    constructor(scene, x, y, tower, target) {
+        super(scene, x, y, tower.projectile);
+        this.name = tower.projectile;
+		var config = scene.cache.json.get(this.name);
+        this.speed = config.speed || 1;
+		this.scene = scene || console.log("Error, no scene defined");
+		this.damage = tower.damage;
+        this.maxTravel = tower.maxTravel || tower.radius;
+        this.totalTravel = 0.0;
+		this.target = target || console.log("Error, no target defined");
 		this.type = config.type;
+
+
         this.enemiesDamaged = new Set();
+
+        this.detonated = false;
+		this.targetAngle = Math.atan((this.y - this.target.y) / (this.x - this.target.x));
+		this.directionFactor = (this.x < this.target.x) ? -1 : 1;
+        // Properties to make it spin
+        this.angle = this.targetAngle; // This is used to rotate the thing
+        this.spinDirection = 1 - (2 * (this.target.uniqueID % 2)); // 1 if uniqueID is even, -1 if uniqueID is odd
+        this.rotationSpeed = 7; //
 		if (this.type == 'piercing'){
-			this.targetAngle = Math.atan((this.y - this.target.y) / (this.x - this.target.x));
-			this.directionFactor = (this.x < this.target.x) ? -1 : 1;
             this.updateFn = this.updatePiercing;
 		}
-		
+
 		if (this.type == 'splash'){
 			//set the splash radius
-			this.splashRadius = 200;
-			this.detonated = false;
-			this.splashFactor = 0.6;
+			this.splashRadius = config.splashRadius || 200;
+			this.splashFactor = config.splashFactor || 0.6;
             this.updateFn = this.updateSplash;
 		}
 
@@ -360,9 +370,20 @@ class Projectile extends Phaser.GameObjects.Sprite {
 
     updatePiercing(time, delta) {
 		var angle = this.targetAngle;
-
+        var frameTravel = this.speed; // How much we will move this frame
+        if(this.totalTravel == this.maxTravel) {
+            this.destroy();
+            return;
+        } else if(frameTravel + this.totalTravel > this.maxTravel) {
+            this.totalTravel = this.maxTravel;
+            let actualTravel = frameTravel + this.totalTravel - this.maxTravel;
+            this.speed = 1.0 * this.speed * actualTravel / frameTravel;
+        } else {
+            this.totalTravel += frameTravel;
+        }
+        console.log(this.totalTravel);
 		this.y -= this.speed * Math.sin(angle) * this.directionFactor;
-		this.x -= this.speed * Math.cos(angle) * this.directionFactor;
+    	this.x -= this.speed * Math.cos(angle) * this.directionFactor;
 
 		var enemies = this.scene.enemyWaves.activeEnemies;
 		for (let i = 0; i < enemies.length; i++){
@@ -420,6 +441,8 @@ class Projectile extends Phaser.GameObjects.Sprite {
 			this.destroy();
             return;
         }
+        // MAKE IT SPIN
+        this.angle += this.rotationSpeed * this.spinDirection;
         if(this.updateFn) {
             // Check if we use a custom update function, and do that instead
             return this.updateFn.call(this,time, delta);
@@ -465,7 +488,7 @@ class Enemy extends Phaser.GameObjects.PathFollower {
         this.hp = this.totalHP;
         this.lastHP = this.hp; /* HP since last update */
         this.percentHP = 1;
-        this.bounty = config.bounty || 0;
+        this.bounty = config.bounty || 1;
         this.setActive(false);
         this.setVisible(false);
 		this.hpBar = this.scene.add.graphics();
@@ -609,9 +632,9 @@ var StartMenuScene = class extends Phaser.Scene {
 
         var themeSong = this.sound.add('theme');
     	themeSong.play();
-    	
+
     }
-	
+
 	update(){
 		if (levelUnlocked == 1){
 			this.lvl2Start.setActive(false);
@@ -627,7 +650,7 @@ var StartMenuScene = class extends Phaser.Scene {
 			this.lvl3Start.setActive(true);
 			this.lvl3Start.setVisible(true);
 		}
-		
+
 	}
 };
 
@@ -662,7 +685,7 @@ var victoryScene = class extends Phaser.Scene {
     constructor(str) {
         super('victory');
 		this.redirectTime = 5000; //time before redirecting in milliseconds
-		
+
     }
     preload() {
         this.load.image('defaultButton', 'assets/images/blue_button09.png');
@@ -733,8 +756,8 @@ class LevelScene extends Phaser.Scene {
 		this.load.image('splashTower', 'assets/images/splashTower.png');
 		this.load.json('splashProjectile', 'src/projectiles/splashProjectile.json');
 		this.load.image('splashProjectile', 'assets/images/splashProjectile.png');
-		
-	
+
+
     }
 
     create() {
@@ -757,20 +780,20 @@ class LevelScene extends Phaser.Scene {
 			runChildUpdate : true
 		});
 
-		
+
 		//bottom right 5 tiles used for tower placement
 		var basicTower = new Tower(this, this.tileSize / 2, this.mapHeight - this.tileSize/2, 'basicTower' );
 		player.towers.add(basicTower, true);
-		
+
 
 		var piercingTower = new Tower(this, this.tileSize /2 + this.tileSize, this.mapHeight - this.tileSize/2, 'piercingTower');
 		player.towers.add(piercingTower, true);
-		
+
 		var splashTower = new Tower(this, this.tileSize /2 + 2 * this.tileSize, this.mapHeight - this.tileSize/2, 'splashTower');
 		player.towers.add(splashTower, true);
-		
-		
-		
+
+
+
 
 		// ----- Projectiles -----
  		this.projectiles = this.add.group();
@@ -778,8 +801,8 @@ class LevelScene extends Phaser.Scene {
 
 	    // Add path for enemies on this level.
 	    this.path = new Phaser.Curves.Path();
-		
-		
+
+
 		this.towerGrid = new Array(this.mapWidth/this.tileSize);
 		for (var i = 0; i < this.towerGrid.length; i++){
 			this.towerGrid[i] = new Array(this.mapHeight/this.tileSize);
@@ -834,19 +857,23 @@ class LevelScene extends Phaser.Scene {
         this.startWaveButton.setFunc(function(context) {
 			if (!context.enemyWaves.isWaveActive()){
 				context.wavesLeft -= 1;
-				//create a save state to store after wave finishes	
+				//create a save state to store after wave finishes
 				player.saveGame();
+                context.startWaveText.setText('Start Wave');
 			}
-            // Infinity signals game is won
-            context.enemyWaves.startNextWave();
+            if(context.enemyWaves.startNextWave() !== undefined) {
+                context.startWaveText.setText('Waiting');
+
+            }
         });
+	    this.startWaveText = new Text(this, this.startWaveButton.x, this.startWaveButton.y, 'Start Wave', { fontSize: '20px', color:'#FFFFFF' });
+        this.startWaveText.x -= this.startWaveText.displayWidth / 2;
+        this.startWaveText.y -= this.startWaveText.displayHeight / 2;
 
         // TODO: Add tower purchase pane
         // TODO: Add selected tower info pane (with upgrade/sell buttons)
 
-	    this.startWaveText = new Text(this, this.startWaveButton.x - 55, this.startWaveButton.y - 10, 'Start Wave', { fontSize: '20px', color:'#FFFFFF' });
-		this.startWaveText.setOrigin(0,0);
-		
+
 
 		//waves left text
 		this.wavesLeftText = new Text(this, menuAnchors.bottomLeft.x, menuAnchors.bottomLeft.y - 80, 'Waves left: ' + this.wavesLeft, { fontSize: '20px', color:'#FFFFFF' });
@@ -870,7 +897,7 @@ class LevelScene extends Phaser.Scene {
             this.scene.start('victory');
 			levelUnlocked = parseInt(this.levelName[this.levelName.length - 1], 10) + 1;
         }
-		
+
 		this.wavesLeftText.setText("Waves left: " + this.wavesLeft);
 		this.liveText.setText('Lives: ' + player.lives);
 		this.goldText.setText('Gold: ' + player.gold);
@@ -879,7 +906,7 @@ class LevelScene extends Phaser.Scene {
 		proj.forEach(function (projectile){
 			projectile.update();
 		});
-		
+
 
 	}
 
@@ -1077,7 +1104,7 @@ class Player {
     constructor(name, gold, lives, waveNum, towers, levelName) {
         // Lets us pass in a player name later if we wanted to create a leaderboard for instance
         this.name = name || "Player 1";
-		this.gold = gold || 100;
+		this.gold = gold || 250;
 		this.lives = lives || 10;
 
 		// Wave number - can be used for save states?
@@ -1107,7 +1134,7 @@ class Player {
         // If no saveFileName provided, use player name?
         // Use caution since these save files also track which level we're on.
         // Might need different save files for each level, with different file names for each?
-      
+
     //Cant get to work currently
 	//var saveObject ={
             //gold: 3,
@@ -1123,7 +1150,7 @@ class Player {
 
     localStorage.setItem("gold", this.gold);
     localStorage.setItem("lives", this.lives);
-    
+
     console.log(this.gold);
     console.log(this.lives);
     console.log(this.levelName);
@@ -1156,17 +1183,17 @@ class Button extends Phaser.GameObjects.Sprite {
 		this.on('pointerdown', function(event){
 			this.setTexture(this.onBtnDown);
 		});
-		
+
 		this.on('pointerout', function(event){
 			this.setTexture(this.key);
 		});
-		
+
 		this.on('pointerover', function(pointer){
 			if (pointer.isDown)
 				this.setTexture(this.onBtnDown);
 		});
     }
-	
+
 	setFunc(func){
 		this.on('pointerup', function(event){
 			this.setTexture(this.key);

@@ -1,6 +1,6 @@
 {
 	"name" : "splashTower",
-	"cost" : 50,
+	"cost" : 60,
 	"bullet_delay": 2000,
 	"projectile" : "splashProjectile",
 	"radius" : 300,
