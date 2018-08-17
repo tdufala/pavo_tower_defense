@@ -8,7 +8,7 @@ import css from './stylesheets/main.css'
 // ======== Globals ========
 var game;
 var player;
-
+var uniqueID = 0; // Used to uniquely identify game objects - if it overflows, shouldn't be a problem
 //--------- CHANGE TO 1 AFTER TESTING ----------------
 var levelUnlocked = 3;
 
@@ -22,7 +22,8 @@ var config = {
     height: 1096,
     pixelArt: true, // antialias: false, roundPixels: true
 	useTicker: true,
-    scene: scenes
+    scene: scenes,
+    preload: gamePreload
 };
 
 // just a little shortcut...
@@ -117,6 +118,10 @@ function windowOnLoad() {
     // Run the game
     player = new Player();
     game = new Phaser.Game(config);
+}
+
+function gamePreload() {
+    game.stage.disableVisibilityChange = true;
 }
 
 // ======== Towers ========
@@ -328,11 +333,11 @@ class Projectile extends Phaser.GameObjects.Sprite {
 		this.damage = damage;
 		this.target = target;
 		this.type = config.type;
+        this.enemiesDamaged = new Set();
 		if (this.type == 'piercing'){
 			this.targetAngle = Math.atan((this.y - this.target.y) / (this.x - this.target.x));
-			this.factor = (this.x < this.target.x) ? -1 : 1;
-			//timer used to make sure bullet doesn't inflict damage on same enemy twice
-			this.timer = this.scene.time.addEvent({delay: 100, repeat: 0});
+			this.directionFactor = (this.x < this.target.x) ? -1 : 1;
+            this.updateFn = this.updatePiercing;
 		}
 		
 		if (this.type == 'splash'){
@@ -340,6 +345,7 @@ class Projectile extends Phaser.GameObjects.Sprite {
 			this.splashRadius = 200;
 			this.detonated = false;
 			this.splashFactor = 0.6;
+            this.updateFn = this.updateSplash;
 		}
 
     }
@@ -352,13 +358,27 @@ class Projectile extends Phaser.GameObjects.Sprite {
     //	var laser1 = this.sound.add('laser1');
     //}
 
+    updatePiercing(time, delta) {
+		var angle = this.targetAngle;
 
-    update() {
-		if (this.y < -50 || this.y > this.scene.mapHeight + 50 || this.x < -50 || this.x > this.scene.mapWidth + 50) {
-			this.setActive(false);
-			this.setVisible(false);
-			this.destroy();
-		}else if (this.type == 'splash' && !this.detonated){
+		this.y -= this.speed * Math.sin(angle) * this.directionFactor;
+		this.x -= this.speed * Math.cos(angle) * this.directionFactor;
+
+		var enemies = this.scene.enemyWaves.activeEnemies;
+		for (let i = 0; i < enemies.length; i++){
+            // Skip if we've damaged this enemy already
+            if(this.enemiesDamaged.has(enemies[i].uniqueID))
+                continue;
+			var dist = Math.hypot(this.y - enemies[i].y, this.x - enemies[i].x);
+			if(dist <= this.scene.tileSize/2) {
+				enemies[i].hp -= this.damage;
+                this.enemiesDamaged.add(enemies[i].uniqueID);
+			}
+		}
+    }
+
+    updateSplash(time, delta) {
+       if(!this.detonated) {
 			if (this.target.active){
 				var angle = Math.atan((this.y - this.target.y) / (this.x - this.target.x));
 				var factor = 1;
@@ -389,41 +409,37 @@ class Projectile extends Phaser.GameObjects.Sprite {
 			} else {
 				this.destroy();
 			}
+        }
+    }
 
-		} else if (this.type == 'piercing'){
-			var angle = this.targetAngle;
+    update(time, delta) {
+        // Check if out of screen
+		if (this.y < -this.width || this.y > this.scene.mapHeight + this.width || this.x < -this.width || this.x > this.scene.mapWidth + this.width) {
+			this.setActive(false);
+			this.setVisible(false);
+			this.destroy();
+            return;
+        }
+        if(this.updateFn) {
+            // Check if we use a custom update function, and do that instead
+            return this.updateFn.call(this,time, delta);
+        }
+        // Default to basic projectile logic
+		if (this.target.active){
+			var angle = Math.atan((this.y - this.target.y) / (this.x - this.target.x));
+			var factor = 1;
 
-			this.y -= this.speed * Math.sin(angle)* this.factor;
-			this.x -= this.speed * Math.cos(angle) * this.factor;
+			if (this.x < this.target.x) factor = -1;
+			this.y -= this.speed * Math.sin(angle)* factor;
+			this.x -= this.speed * Math.cos(angle) * factor;
 
-			var enemies = this.scene.enemyWaves.activeEnemies;
-			for (let i = 0; i < enemies.length; i++){
-				var dist = Math.hypot(this.y - enemies[i].y, this.x - enemies[i].x);
-				if(dist <= this.scene.tileSize/2 && this.timer.getProgress() == 1){
-					enemies[i].hp -= this.damage;
-					this.timer.destroy();
-					this.timer = this.scene.time.addEvent({delay: 100, repeat: 0});
-				}
-			}
-
-		} else {
-			if (this.target.active){
-				//default to basic projectile logic
-				var angle = Math.atan((this.y - this.target.y) / (this.x - this.target.x));
-				var factor = 1;
-
-				if (this.x < this.target.x) factor = -1;
-				this.y -= this.speed * Math.sin(angle)* factor;
-				this.x -= this.speed * Math.cos(angle) * factor;
-
-				var dist = Math.hypot(this.y - this.target.y, this.x - this.target.x);
-				if(dist <= this.scene.tileSize/2){
-					this.target.hp -= this.damage;
-					this.destroy();
-				}
-			} else {
+			var dist = Math.hypot(this.y - this.target.y, this.x - this.target.x);
+			if(dist <= this.scene.tileSize/2){
+				this.target.hp -= this.damage;
 				this.destroy();
 			}
+		} else {
+			this.destroy();
 		}
     }
 };
@@ -437,6 +453,8 @@ class Enemy extends Phaser.GameObjects.PathFollower {
 		super(scene, path, -Infinity, -Infinity, name);
 		this.scene = scene;
 		this.name = name;
+        // We want a unique ID to identify enemies
+        this.uniqueID = uniqueID++;
 
         // Read config vars
         // We do this to do a shallow clone.
