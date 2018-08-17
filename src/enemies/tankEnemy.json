@@ -1,0 +1,8 @@
+{
+    "name": "tankEnemy",
+	"type": "ground",
+	"hp": 10000,
+	"skills": {},	
+	"speed": 50,
+	"bounty" : 10
+}

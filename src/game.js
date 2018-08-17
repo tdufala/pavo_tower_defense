@@ -316,13 +316,14 @@ class Projectile extends Phaser.GameObjects.Sprite {
     //	var laser1 = this.sound.add('laser1');
     //}
 
+
     update() {
 		if (this.y < -50 || this.y > this.scene.mapHeight + 50 || this.x < -50 || this.x > this.scene.mapWidth + 50) {
 			this.setActive(false);
 			this.setVisible(false);
 			this.destroy();
 		}else if (this.type == 'splash' && !this.detonated){
-			if (this.target){
+			if (this.target.active){
 				var angle = Math.atan((this.y - this.target.y) / (this.x - this.target.x));
 				var factor = 1;
 
@@ -370,7 +371,7 @@ class Projectile extends Phaser.GameObjects.Sprite {
 			}
 
 		} else {
-			if (this.target){
+			if (this.target.active){
 				//default to basic projectile logic
 				var angle = Math.atan((this.y - this.target.y) / (this.x - this.target.x));
 				var factor = 1;
@@ -644,7 +645,6 @@ class LevelScene extends Phaser.Scene {
         this.waveFile = 'src/waves/' + this.levelName + '.json';
         this.enemyWaves = null;
         this.projectiles = null;
-        this.uiElements = null;
         // List of towers you can buy on this level.
         // Can override to change which towers would be buyable.
         // Creates 3x3 grid, filled left to right, top to bottom, starting from top-left.
@@ -749,6 +749,7 @@ class LevelScene extends Phaser.Scene {
 
 	    // ---- Enemies ----
         this.enemyWaves = new EnemyWaves(this);
+		this.wavesLeft = this.enemyWaves.waveCount;
 
         // Add UI Elements
         this.buildUI();
@@ -768,18 +769,28 @@ class LevelScene extends Phaser.Scene {
 
         // Button to start next wave.
         // TODO: Make this more visually appealing
-        this.startWaveButton = new Button(this, menuAnchors.bottomLeft.x, menuAnchors.bottomLeft.y);
+        this.startWaveButton = new Button(this, menuAnchors.bottomLeft.x, menuAnchors.bottomLeft.y, 'longButton');
         this.startWaveButton.x += this.startWaveButton.displayWidth / 2;
         this.startWaveButton.y -= this.startWaveButton.displayHeight / 2;
-        this.startWaveButton.on('pointerdown', function(event) {
-            this.enemyWaves.startNextWave()
-            player.saveGame();
-        }, this);
+        this.startWaveButton.setFunc(function(context) {
+			if (!context.enemyWaves.isWaveActive()){
+				context.wavesLeft -= 1;
+				//create a save state to store after wave finishes	
+				player.saveGame();
+			}
+            // Infinity signals game is won
+            context.enemyWaves.startNextWave();
+        });
+
         // TODO: Add tower purchase pane
         // TODO: Add selected tower info pane (with upgrade/sell buttons)
 
 	    this.startWaveText = new Text(this, this.startWaveButton.x - 55, this.startWaveButton.y - 10, 'Start Wave', { fontSize: '20px', color:'#FFFFFF' });
 		this.startWaveText.setOrigin(0,0);
+		
+
+		//waves left text
+		this.wavesLeftText = new Text(this, menuAnchors.bottomLeft.x, menuAnchors.bottomLeft.y - 80, 'Waves left: ' + this.wavesLeft, { fontSize: '20px', color:'#FFFFFF' });
 
         // ++ Non-interactible indicators ++
         // Life counter
@@ -800,7 +811,8 @@ class LevelScene extends Phaser.Scene {
             this.scene.start('victory');
 			levelUnlocked = parseInt(this.levelName[this.levelName.length - 1], 10) + 1;
         }
-
+		
+		this.wavesLeftText.setText("Waves left: " + this.wavesLeft);
 		this.liveText.setText('Lives: ' + player.lives);
 		this.goldText.setText('Gold: ' + player.gold);
 
@@ -808,6 +820,8 @@ class LevelScene extends Phaser.Scene {
 		proj.forEach(function (projectile){
 			projectile.update();
 		});
+		
+
 	}
 
 
