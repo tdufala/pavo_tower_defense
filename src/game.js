@@ -785,7 +785,6 @@ class LevelScene extends Phaser.Scene {
 		var basicTower = new Tower(this, this.tileSize / 2, this.mapHeight - this.tileSize/2, 'basicTower' );
 		player.towers.add(basicTower, true);
 
-
 		var piercingTower = new Tower(this, this.tileSize /2 + this.tileSize, this.mapHeight - this.tileSize/2, 'piercingTower');
 		player.towers.add(piercingTower, true);
 
@@ -837,6 +836,24 @@ class LevelScene extends Phaser.Scene {
         this.buildUI();
     }
 
+
+    onWaveStart() {
+	    this.wavesLeft -= 1;
+		//create a save state to store after wave finishes
+        this.startWaveButton.setAlpha(0);
+        this.startWaveText.setText('Waiting');
+        this.startWaveText.x = this.startWaveButton.x - this.startWaveText.displayWidth / 2;
+        this.startWaveText.y = this.startWaveButton.y - this.startWaveText.displayHeight / 2;
+    }
+    
+    onWaveEnd() {
+		player.saveGame();
+        this.startWaveButton.setAlpha(1);
+        this.startWaveText.setText('Start Wave');
+        this.startWaveText.x = this.startWaveButton.x - this.startWaveText.displayWidth / 2;
+        this.startWaveText.y = this.startWaveButton.y - this.startWaveText.displayHeight / 2;
+    }
+
     // Add UI elements.
     buildUI() {
         // ---- UI elements ----
@@ -844,7 +861,7 @@ class LevelScene extends Phaser.Scene {
         // ++ Buttons ++
         // Back to start menu button
         // TODO: Make this a button, and more visually appealing
-        this.menuTextButton = new Text(this, menuAnchors.topRight.x, menuAnchors.topRight.y, 'Return to Menu', { fontSize: '50px', color:'#00FF00', rtl: true}).setInteractive();
+        this.menuTextButton = new Text(this, menuAnchors.topRight.x, menuAnchors.topRight.y, 'Return to Menu', { fontSize: '49pt', color:'#00FF00', rtl: true}).setInteractive();
         this.menuTextButton.on('pointerdown', function(event) {
             this.scene.start('startMenu');
         }, this);
@@ -855,35 +872,30 @@ class LevelScene extends Phaser.Scene {
         this.startWaveButton.x += this.startWaveButton.displayWidth / 2;
         this.startWaveButton.y -= this.startWaveButton.displayHeight / 2;
         this.startWaveButton.setFunc(function(context) {
-			if (!context.enemyWaves.isWaveActive()){
-				context.wavesLeft -= 1;
-				//create a save state to store after wave finishes
-				player.saveGame();
-                context.startWaveText.setText('Start Wave');
-			}
             if(context.enemyWaves.startNextWave() !== undefined) {
-                context.startWaveText.setText('Waiting');
-
+                context.onWaveStart();
             }
+            context.startWaveButton.once('waveEnd', context.onWaveEnd, context);
         });
-	    this.startWaveText = new Text(this, this.startWaveButton.x, this.startWaveButton.y, 'Start Wave', { fontSize: '20px', color:'#FFFFFF' });
-        this.startWaveText.x -= this.startWaveText.displayWidth / 2;
-        this.startWaveText.y -= this.startWaveText.displayHeight / 2;
+	    this.startWaveText = new Text(this, 0, 0, 'Start Wave', { fontSize: '21pt', color:'#FFFFFF' });
+        this.startWaveText.x = this.startWaveButton.x - this.startWaveText.displayWidth / 2;
+        this.startWaveText.y = this.startWaveButton.y - this.startWaveText.displayHeight / 2;
 
         // TODO: Add tower purchase pane
         // TODO: Add selected tower info pane (with upgrade/sell buttons)
 
 
 
-		//waves left text
-		this.wavesLeftText = new Text(this, menuAnchors.bottomLeft.x, menuAnchors.bottomLeft.y - 80, 'Waves left: ' + this.wavesLeft, { fontSize: '20px', color:'#FFFFFF' });
 
         // ++ Non-interactible indicators ++
         // Life counter
-		this.liveText = new Text(this, menuAnchors.topLeft.x + 16, menuAnchors.topLeft.y + 16, 'Lives: ' + player.lives, { fontSize: '24px', fill: '#FFF' });
+		this.liveText = new Text(this, menuAnchors.topLeft.x + 16, menuAnchors.topLeft.y + 16, 'Lives: ' + player.lives, { fontSize: '21pt', fill: '#FFF' });
 
 		// Gold counter
-		this.goldText = new Text(this, menuAnchors.topLeft.x + 16, menuAnchors.topLeft.y + 40, 'Gold: ' + player.gold, { fontSize: '24px', fill: '#FFF' });
+		this.goldText = new Text(this, menuAnchors.topLeft.x + 16, menuAnchors.topLeft.y + 40, 'Gold: ' + player.gold, { fontSize: '21pt', fill: '#FFF' });
+
+		// Wave counter
+		this.wavesLeftText = new Text(this, menuAnchors.topLeft.x + 16, menuAnchors.topLeft.y + 64, 'Waves left: ' + this.wavesLeft, { fontSize: '21pt', color:'#FFF' });
     }
 
 	update() {
@@ -896,6 +908,10 @@ class LevelScene extends Phaser.Scene {
         if(this.enemyWaves.gameWon()) {
             this.scene.start('victory');
 			levelUnlocked = parseInt(this.levelName[this.levelName.length - 1], 10) + 1;
+        }
+        // Check if there's currently a wave in progress
+        if(!this.enemyWaves.isWaveActive()) {
+            this.startWaveButton.emit('waveEnd');
         }
 
 		this.wavesLeftText.setText("Waves left: " + this.wavesLeft);
@@ -1202,11 +1218,6 @@ class Button extends Phaser.GameObjects.Sprite {
 	}
 }
 
-class TowerButton extends Button {
-    constructor(scene, x, y, texture, frame) {
-        super(scene, x, y, texture, frame)
-    }
-}
 // ========= Text class ========
 // Used to add game text with some common defaults
 // These are always added to the scene, and non-interactive by default
