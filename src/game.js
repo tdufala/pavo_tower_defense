@@ -277,7 +277,7 @@ class Tower extends Phaser.GameObjects.Sprite {
 				} else if (this.type == 'piercingTower'){
 					specText += 'Piercing tower: shoots a bullet that travels through \nfirst detected enemy and damages all enemies it passes through';
 				} else {
-					specText += 'Splash tower: shoots a bullet that explodes upon \nreaching its target (first detected enemy)';
+					specText += 'Splash tower: shoots a bullet that explodes upon \nreaching its target dealing 60% damage to enemies in the splash radius';
 				}
 				this.towerText.setText(specText);
 				this.radiusGraphics.lineStyle(1, 0xFFFFFF, 1);
@@ -934,14 +934,6 @@ var Level1Scene = class extends LevelScene {
         super('level1');
     }
 
-    preload() {
-        super.preload();
-    }
-
-    create() {
-        super.create();
-    }
-
 };
 
 // Level 2
@@ -949,28 +941,12 @@ var Level2Scene = class extends LevelScene {
     constructor() {
         super('level2');
     }
-
-    preload() {
-        super.preload();
-    }
-
-    create() {
-        super.create();
-    }
 };
 
 // Level 3
 var Level3Scene = class extends LevelScene {
     constructor() {
         super('level3');
-    }
-
-    preload() {
-        super.preload();
-    }
-
-    create() {
-        super.create();
     }
 };
 
