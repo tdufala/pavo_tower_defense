@@ -8,6 +8,11 @@ import css from './stylesheets/main.css'
 // ======== Globals ========
 var game;
 var player;
+
+//--------- CHANGE TO 1 AFTER TESTING ----------------
+var levelUnlocked = 3;
+
+
 var scenes = [];
 var config = {
     type: Phaser.AUTO,
@@ -235,6 +240,7 @@ class Tower extends Phaser.GameObjects.Sprite {
 				this.marker.strokeRect(0, 0, this.scene.tileSize, this.scene.tileSize);
 				this.marker.setAlpha(1);
 				this.setAlpha(0.5);
+				this.disableInteractive();
 
 			}
 		} else {
@@ -289,6 +295,13 @@ class Projectile extends Phaser.GameObjects.Sprite {
 			//timer used to make sure bullet doesn't inflict damage on same enemy twice
 			this.timer = this.scene.time.addEvent({delay: 100, repeat: 0});
 		}
+		
+		if (this.type == 'splash'){
+			//set the splash radius
+			this.splashRadius = 200;
+			this.detonated = false;
+			this.splashFactor = 0.6;
+		}
 
     }
 
@@ -305,19 +318,38 @@ class Projectile extends Phaser.GameObjects.Sprite {
 			this.setActive(false);
 			this.setVisible(false);
 			this.destroy();
-		}else if (this.type == 'basic' || this.type == 'splash'){
-			var angle = Math.atan((this.y - this.target.y) / (this.x - this.target.x));
-			var factor = 1;
+		}else if (this.type == 'splash' && !this.detonated){
+			if (this.target){
+				var angle = Math.atan((this.y - this.target.y) / (this.x - this.target.x));
+				var factor = 1;
 
-			if (this.x < this.target.x) factor = -1;
-			this.y -= this.speed * Math.sin(angle)* factor;
-			this.x -= this.speed * Math.cos(angle) * factor;
+				if (this.x < this.target.x) factor = -1;
+				this.y -= this.speed * Math.sin(angle)* factor;
+				this.x -= this.speed * Math.cos(angle) * factor;
 
-			var dist = Math.hypot(this.y - this.target.y, this.x - this.target.x);
-			if(dist <= this.scene.tileSize/2){
-				this.target.hp -= this.damage;
+				var dist = Math.hypot(this.y - this.target.y, this.x - this.target.x);
+				if(dist <= this.scene.tileSize/2){
+					this.detonated = true;
+					this.target.hp -= this.damage;
+					this.splashGraphics = this.scene.add.graphics();
+					this.splashGraphics.fillStyle(0xFFF200, 0.3);
+					this.splashGraphics.fillCircle(this.x, this.y, this.splashRadius);
+					this.scene.time.delayedCall(50, function(){
+						this.splashGraphics.destroy();
+						}, [], this);
+					var enemies = this.scene.enemyWaves.activeEnemies;
+					for (let i = 0; i < enemies.length; i++){
+						var dist = Math.hypot(this.y - enemies[i].y, this.x - enemies[i].x);
+						if(dist <= this.splashRadius && enemies[i] != this.target){
+							enemies[i].hp -= this.damage * this.splashFactor;
+						}
+					}
+					this.destroy();
+				}
+			} else {
 				this.destroy();
 			}
+
 		} else if (this.type == 'piercing'){
 			var angle = this.targetAngle;
 
@@ -334,6 +366,24 @@ class Projectile extends Phaser.GameObjects.Sprite {
 				}
 			}
 
+		} else {
+			if (this.target){
+				//default to basic projectile logic
+				var angle = Math.atan((this.y - this.target.y) / (this.x - this.target.x));
+				var factor = 1;
+
+				if (this.x < this.target.x) factor = -1;
+				this.y -= this.speed * Math.sin(angle)* factor;
+				this.x -= this.speed * Math.cos(angle) * factor;
+
+				var dist = Math.hypot(this.y - this.target.y, this.x - this.target.x);
+				if(dist <= this.scene.tileSize/2){
+					this.target.hp -= this.damage;
+					this.destroy();
+				}
+			} else {
+				this.destroy();
+			}
 		}
     }
 };
@@ -463,6 +513,7 @@ var StartMenuScene = class extends Phaser.Scene {
 
     preload() {
         this.load.image('defaultButton', 'assets/images/blue_button09.png');
+		this.load.image('defaultButtondown', 'assets/images/blue_button08.png')
         this.load.image('blueCircle', 'assets/images/blue_circle.png');
         this.load.image('greenCircle', 'assets/images/green_circle.png');
         this.load.audio('theme', 'assets/audio/battle.mp3');
@@ -473,35 +524,53 @@ var StartMenuScene = class extends Phaser.Scene {
 
     create() {
         var startMenuText = new Text(this, 75, 75, 'Start Menu', { fontSize: '49pt', color:'#0000FF'});
-        var level1Text = new Text(this, 75, 200, 'Level 1', { fontSize: '50px', color:'#00FF00' });
-        var level2Text = new Text(this, 75, 300, 'Level 2', { fontSize: '50px', color:'#00FF00' });
-        var level3Text = new Text(this, 75, 400, 'Level 3', { fontSize: '50px', color:'#00FF00' });
+        this.level1Text = new Text(this, 75, 200, 'Level 1', { fontSize: '50px', color:'#00FF00' });
+        this.level2Text = new Text(this, 75, 300, 'Level 2', { fontSize: '50px', color:'#00FF00' });
+        this.level3Text = new Text(this, 75, 400, 'Level 3', { fontSize: '50px', color:'#00FF00' });
         // Start Button
-        var lvl1Start = new Button(this, this.sys.canvas.width - 125, 225);
+        this.lvl1Start = new Button(this, this.sys.canvas.width - 125, 225);
 
-        var lvl2Start = new Button(this, this.sys.canvas.width - 125, 325);
+        this.lvl2Start = new Button(this, this.sys.canvas.width - 125, 325);
 
-        var lvl3Start = new Button(this, this.sys.canvas.width - 125, 425);
+        this.lvl3Start = new Button(this, this.sys.canvas.width - 125, 425);
         // Use 'pointerover' for mouseover event. Use 'pointerout' for mouse-leave event. - can use setTexture to change texture, for instance.
-        lvl1Start.on('pointerdown', function(event) {
-            this.scene.start('level1');
+        this.lvl1Start.setFunc(function(context) {
+            context.scene.start('level1');
             themeSong.stop();
-        }, this); // Start the main game.
+        }); // Start the main game.
 
-        lvl2Start.on('pointerdown', function(event) {
-            this.scene.start('level2');
+        this.lvl2Start.setFunc(function(context) {
+            context.scene.start('level2');
             themeSong.stop();
-        }, this); // Start the main game.
+        }); // Start the main game.
 
-        lvl3Start.on('pointerdown', function(event) {
-            this.scene.start('level3');
+        this.lvl3Start.setFunc(function(context) {
+            context.scene.start('level3');
             themeSong.stop();
-        }, this); // Start the main game.
+        }); // Start the main game.
 
         var themeSong = this.sound.add('theme');
     	themeSong.play();
     	
     }
+	
+	update(){
+		if (levelUnlocked == 1){
+			this.lvl2Start.setActive(false);
+			this.lvl2Start.setVisible(false);
+			this.lvl3Start.setActive(false);
+			this.lvl3Start.setVisible(false);
+		} else if (levelUnlocked == 2){
+			this.lvl2Start.setActive(true);
+			this.lvl2Start.setVisible(true);
+			this.lvl3Start.setActive(false);
+			this.lvl3Start.setVisible(false);
+		} else {
+			this.lvl3Start.setActive(true);
+			this.lvl3Start.setVisible(true);
+		}
+		
+	}
 };
 
 
@@ -585,6 +654,9 @@ class LevelScene extends Phaser.Scene {
     preload() {
         // Load common assets
         this.load.image('defaultButton', 'assets/images/blue_button09.png');
+		this.load.image('defaultButtondown', 'assets/images/blue_button09.png');
+		this.load.image('longButton', 'assets/images/green_button00.png');
+		this.load.image('longButtondown', 'assets/images/green_button02.png');
         this.load.image('gameTiles', 'assets/spritesheets/minimalTilesTowers.png', { frameWidth: 64, frameHeight: 64});
         this.load.tilemapTiledJSON(this.levelName, 'src/maps/' + this.levelName + '.json');
         this.load.json('waveFile' + this.levelName, this.waveFile);
@@ -604,6 +676,8 @@ class LevelScene extends Phaser.Scene {
 		this.load.image('splashTower', 'assets/images/splashTower.png');
 		this.load.json('splashProjectile', 'src/projectiles/splashProjectile.json');
 		this.load.image('splashProjectile', 'assets/images/splashProjectile.png');
+		
+	
     }
 
     create() {
@@ -701,6 +775,8 @@ class LevelScene extends Phaser.Scene {
         // TODO: Add tower purchase pane
         // TODO: Add selected tower info pane (with upgrade/sell buttons)
 
+	    this.startWaveText = new Text(this, startWaveButton.x-55, startWaveButton.y-10, 'Start Wave', { fontSize: '20px', color:'#FFFFFF' });
+		this.startWaveText.setOrigin(0,0);
 
         // ++ Non-interactible indicators ++
         // Life counter
@@ -719,6 +795,7 @@ class LevelScene extends Phaser.Scene {
         // Check for game won
         if(this.enemyWaves.gameWon()) {
             this.scene.start('victory');
+			levelUnlocked = parseInt(this.levelName[this.levelName.length - 1], 10) + 1;
         }
 
 		this.liveText.setText('Lives: ' + player.lives);
@@ -934,7 +1011,6 @@ class Player {
         // String representing the level the player is on - can be used for save states?
         this.levelName = levelName || null;
 
-        
     }
 
     // TODO: Implement this function to load save states
@@ -997,7 +1073,29 @@ class Button extends Phaser.GameObjects.Sprite {
             scene.sys.updateList.add(this);
         }
         this.setInteractive();
+		this.onBtnDown = texture + 'down';
+		this.scene = scene;
+		this.key = texture;
+		this.on('pointerdown', function(event){
+			this.setTexture(this.onBtnDown);
+		});
+		
+		this.on('pointerout', function(event){
+			this.setTexture(this.key);
+		});
+		
+		this.on('pointerover', function(pointer){
+			if (pointer.isDown)
+				this.setTexture(this.onBtnDown);
+		});
     }
+	
+	setFunc(func){
+		this.on('pointerup', function(event){
+			this.setTexture(this.key);
+			func(this.scene);
+		});
+	}
 }
 // =========  class ========
 // Used to add game text with some common defaults
