@@ -24,16 +24,19 @@ var config = {
 	useTicker: true,
     scene: scenes
 };
+
 // just a little shortcut...
 var normalFont = {
     fontSize: "49pt"
 };
+
 // Global reference points, can be used for positioning
 // Note these are static. May be useful to update them
 var menuBarSize = {
     x: config.width,
     y: 200
-}
+};
+
 var menuAnchors = {
     topLeft: {
         x: 0,
@@ -223,7 +226,7 @@ class Tower extends Phaser.GameObjects.Sprite {
 						}
 						gameObject.pointer = {'x': pointerTileX, 'y': pointerTileY};
 
-					} else {
+				} else {
 						gameObject.setPosition(gameObject.startPos.x, gameObject.startPos.y);
 
 					}
@@ -775,7 +778,7 @@ class LevelScene extends Phaser.Scene {
         // TODO: Add tower purchase pane
         // TODO: Add selected tower info pane (with upgrade/sell buttons)
 
-	    this.startWaveText = new Text(this, startWaveButton.x-55, startWaveButton.y-10, 'Start Wave', { fontSize: '20px', color:'#FFFFFF' });
+	    this.startWaveText = new Text(this, this.startWaveButton.x - 55, this.startWaveButton.y - 10, 'Start Wave', { fontSize: '20px', color:'#FFFFFF' });
 		this.startWaveText.setOrigin(0,0);
 
         // ++ Non-interactible indicators ++
@@ -1061,6 +1064,7 @@ class Player {
 };
 
 // ========= UI classes ========
+// ========= Button class ========
 // Used to add interactible button UI elements with some common defaults
 // These are always added to the scene, and interactive by default.
 class Button extends Phaser.GameObjects.Sprite {
@@ -1097,7 +1101,13 @@ class Button extends Phaser.GameObjects.Sprite {
 		});
 	}
 }
-// =========  class ========
+
+class TowerButton extends Button {
+    constructor(scene, x, y, texture, frame) {
+        super(scene, x, y, texture, frame)
+    }
+}
+// ========= Text class ========
 // Used to add game text with some common defaults
 // These are always added to the scene, and non-interactive by default
 class Text extends Phaser.GameObjects.Text {

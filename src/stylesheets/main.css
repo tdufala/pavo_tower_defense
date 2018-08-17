@@ -4,11 +4,22 @@ body {
 
 #phaser-app {
     padding: 0px;
-	width: 60%;
 }
 
 #phaser-app > canvas {
-
+    --nativeGameWidth: 1344px; /* Change this property and media query if canvas width changes */
+    --nativeGameHeight: 1096px; /* Change this property and media query if canvas height changes */
+    --scaleFactor: 1; /* Change this property and media query to scale the game */
+    --renderWidth: calc(var(--nativeGameWidth) * var(--scaleFactor)); /* Shouldn't need to change this */
+    --renderHeight: calc(var(--nativeGameHeight) * var(--scaleFactor)); /* Shouldn't need to change this */
+    --marginWidth: calc(100vw - var(--renderWidth)); /* Shouldn't need to change this */
+    --marginHeight: calc(100vh - var(--renderHeight)); /* Shouldn't need to change this */
+    max-width: var(--renderWidth);
+    max-height: var(--renderHeight);
+    margin-left: calc(var(--marginWidth) / 2); /* Shouldn't need to change this */
+    margin-right: calc(var(--marginWidth) / 2); /* Shouldn't need to change this */
+    margin-top: 0px;
+    margin-bottom: 0px;
     width: 100%;
     height: 100%;
 }
@@ -19,19 +30,18 @@ body {
     font-weight: normal;
     src: url("/assets/fonts/visitor/visitor1.ttf");
 }
-
+/* Sadly, need to hardcode to calc(var(--scaleFactor) * var(--renderWidth)) */
 @media (max-width: 1344px) {
-    #phaser-app {
-        max-width: 100%;
-    }
     #phaser-app > canvas {
+        max-width: 100%;
         margin-left: 0px;
         margin-right: 0px;
     }
 }
 
+/* Sadly, need to hardcode to calc(var(--scaleFactor) * var(--renderHeight)) */
 @media (max-height: 1096px) {
-    #phaser-app {
-        max-height: 100%;
+    #phaser-app > canvas {
+        max-height: 100vh;
     }
 }
