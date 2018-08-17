@@ -4,5 +4,5 @@
 	"bullet_delay": 800,
 	"projectile" : "piercingProjectile",
 	"radius" : 400,
-	"damage" : 10  
+	"damage" : 15  
 }

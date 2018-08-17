@@ -1,7 +1,6 @@
 {
 	"name" : "piercingProjectile",
 	"speed" : 15,
-	"damage" : 15,
 	"image" : "piercingProjectile.png",
 	"type" : "piercing"
 }
