@@ -542,6 +542,7 @@ var gameOver = class extends Phaser.Scene {
         var startMenuText = new Text(this, menuAnchors.topRight.x, menuAnchors.topRight.y, 'Return to Menu', { fontSize: '49pt', color:'#00FF00', rtl: true}).setInteractive();
         startMenuText.on('pointerdown', function(event) {
             this.scene.start('startMenu');
+            gameOverSound.stop();
         }, this); // Return to the start menu.
     }
 
