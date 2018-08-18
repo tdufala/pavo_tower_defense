@@ -130,43 +130,25 @@ class Tower extends Phaser.GameObjects.Sprite {
         super(scene, x, y, name);
         this.scene = scene;
         this.name = name;
-
-        this.isDraggable = false;
-
+        // We want interactivity for mouseovers
+        this.setInteractive();
         // Read data from config file.
         var config = this.scene.cache.json.get(this.name);
         // Default cost of 0
         this.cost = config.cost || 0;
-
-        //used to return tower to starting position if placed in invalid location
-        this.startPos = {'x': x, 'y': y};
-
-        //projectile to use for this tower
-        this.projectile = config.projectile;
-
         this.type = config.name;
+        this.radius = config.radius; // Tower range for seeking enemies
+        this.damage = config.damage;
+        this.projectile = config.projectile; // Projectile name - references JSON file
 
-        //marker used for tower
-        this.marker = this.scene.add.graphics();
 
-        //active represents whether or not the tower is searching for enemies
-        this.isOn = false;
-
-        //radius to look for enemies
-        this.radius = config.radius;
 
         //time to wait between shots
         this.bullet_delay = config.bullet_delay;
 
         //this.time = this.time.addEvent({delay: 0, repeat: 0});
-        this.timer = this.scene.time.addEvent({delay: 1, repeat: 0});
-        this.purch = 0;
-
-        this.damage = config.damage;
-
+        this.bulletTimer = this.scene.time.addEvent({delay: 1, repeat: 0});
         this.radiusGraphics = this.scene.add.graphics();
-
-        this.towerText = new Text(scene,this.x - this.scene.tileSize/2 + 5, this.y - this.scene.tileSize - 55, "", {fontSize: '14pt', color:'#FFFFFF'});
         // Set up radius circle
         this.on('pointerover', function(pointer){
             this.radiusGraphics.lineStyle(1, 0xFFFFFF, 1);
@@ -175,161 +157,30 @@ class Tower extends Phaser.GameObjects.Sprite {
         this.on('pointerout', function(pointer){
             this.radiusGraphics.clear();
         });
+
+
     }
-
-
+ 
     update() {
-
-
-        if (!this.isOn){
-            if (this.cost <= player.gold){
-                this.setAlpha(1);
-                this.marker.lineStyle(1, 0x7CFC00, 1);
-                this.marker.strokeRect(0, 0, this.scene.tileSize, this.scene.tileSize);
-                this.marker.setAlpha(0);
-                this.setInteractive();
-                this.scene.input.setDraggable(this);
-                this.isDraggable = true;
-                this.scene.input.on('dragstart', function (pointer, gameObject) {
-                    gameObject.setAlpha(0.5);
-                    gameObject.radiusGraphics.clear();
-                    gameObject.towerText.setText("");
-                });
-                this.scene.input.on('drag', function (pointer, gameObject, dragX, dragY) {
-                    gameObject.setPosition(dragX, dragY);
-                    var pointerTileX = this.scene.map.worldToTileX(pointer.x);
-                    var pointerTileY = this.scene.map.worldToTileY(pointer.y);
-                    var canPlace = false;
-                     this.scene.towerPlaceable.findTile(function(tile){
-                        if (tile.x == pointerTileX && tile.y == pointerTileY && !gameObject.scene.towerGrid[pointerTileX][pointerTileY]){
-                            if (tile.index == 1){
-                                canPlace = true;
-                            }
-                            return true;
-                        }
-                    });
-                    if (canPlace){
-                        gameObject.marker.setAlpha(1);
-                        gameObject.marker.x = this.scene.map.tileToWorldX(pointerTileX);
-                        gameObject.marker.y = this.scene.map.tileToWorldY(pointerTileY);
-                    }
-                    gameObject.radiusGraphics.clear();
-                    gameObject.radiusGraphics.lineStyle(1, "0xFFFFFF", 1);
-                    gameObject.radiusGraphics.strokeCircle(dragX, dragY, gameObject.radius);
-                });
-                this.scene.input.on('dragend', function(pointer, gameObject) {
-                    gameObject.radiusGraphics.clear();
-                    gameObject.setAlpha(1);
-                    // Snap to tile coordinates, but in world space
-                    var pointerTileX = this.scene.map.worldToTileX(pointer.x);
-                    var pointerTileY = this.scene.map.worldToTileY(pointer.y);
-                    var canPlace = false;
-
-                    this.scene.towerPlaceable.findTile(function(tile){
-                        if (tile.x == pointerTileX && tile.y == pointerTileY && !gameObject.scene.towerGrid[pointerTileX][pointerTileY]){
-                            if (tile.index == 1){
-                                canPlace = true;
-                                return true;
-                            }
-
-                        }
-                    });
-                    gameObject.marker.setAlpha(0);
-                    if (canPlace){
-                        gameObject.purch++;
-                        gameObject.setPosition(pointerTileX * gameObject.scene.tileSize + gameObject.scene.tileSize/2, pointerTileY * gameObject.scene.tileSize + gameObject.scene.tileSize/2);
-                        gameObject.isOn = true;
-                        gameObject.radiusGraphics.clear();
-                        if (gameObject.purch == 1){
-                            player.gold -= gameObject.cost;
-                            var newTower = new Tower(gameObject.scene, gameObject.startPos.x, gameObject.startPos.y, gameObject.name);
-                            player.towers.add(newTower,true);
-                            gameObject.towerText.destroy();
-                            gameObject.removeAllListeners();
-                            gameObject.on('pointerover', function(pointer){
-                                gameObject.radiusGraphics.lineStyle(1, 0xFFFFFF, 1);
-                                gameObject.radiusGraphics.strokeCircle(gameObject.x, gameObject.y, gameObject.radius);
-                            });
-                            gameObject.on('pointerout', function(pointer){
-                                gameObject.radiusGraphics.clear();
-                            });
-                        }
-                        gameObject.pointer = {'x': pointerTileX, 'y': pointerTileY};
-
-                    } else {
-                        gameObject.setPosition(gameObject.startPos.x, gameObject.startPos.y);
-
-                    }
-                });
-
-
-
-            }    else {
-                var pointerTileX = this.scene.map.worldToTileX(this.x);
-                var pointerTileY = this.scene.map.worldToTileY(this.y);
-                this.marker.x = this.scene.map.tileToWorldX(pointerTileX);
-                this.marker.y = this.scene.map.tileToWorldY(pointerTileY);
-                this.marker.lineStyle(1, 0xFF0000, 1);
-                this.marker.strokeRect(0, 0, this.scene.tileSize, this.scene.tileSize);
-                this.marker.setAlpha(1);
-                this.setAlpha(0.5);
-                this.disableInteractive();
-
+        // Get nearest enemy (if there are any)
+        var enemies = this.scene.enemyWaves.activeEnemies;
+        if (enemies){
+            var nearestEnemy = {'index' : null, 'dist' : Infinity};
+            for (var i = 0; i < enemies.length; i++){
+                var dist = Math.hypot(enemies[i].x - this.x, enemies[i].y - this.y);
+                if (nearestEnemy.index === null || nearestEnemy.dist > dist){
+                    nearestEnemy.index = i;
+                    nearestEnemy.dist = dist;
+                }
             }
-
-            this.on('pointerover', function(pointer){
-                var fireRate = 1/(this.bullet_delay / 1000);
-                var specText;
-                if (fireRate == 1) {
-                    specText = "Cost: " + this.cost + "\nDamage: " + this.damage + "\nFire-rate: " + fireRate + " shots/sec\n";
-                } else {
-                    specText = "Cost: " + this.cost + "\nDamage: " + this.damage + "\nFire-rate: " + fireRate + " shots/sec\n";
-                }
-                if (this.type == 'basicTower'){
-                    specText += 'Basic tower: single target homing projectiles';
-                } else if (this.type == 'piercingTower'){
-                    specText += 'Piercing tower: shoots a bullet that \ndamages all enemies it passes through';
-                } else {
-                    specText += 'Splash tower: shoots a bullet that explodes upon \nreaching its target';
-                }
-                this.towerText.setText(specText);
-                this.radiusGraphics.lineStyle(1, 0xFFFFFF, 1);
-                this.radiusGraphics.strokeCircle(this.x, this.y, this.radius);
-            });
-            this.on('pointerout', function(pointer){
-                this.towerText.setText("");
-                this.radiusGraphics.clear();
-            });
-        } else {
-            //projectile logic here
-            if (!this.scene.towerGrid[this.pointer.x][this.pointer.y]){
-                this.scene.towerGrid[this.pointer.x][this.pointer.y] = true;
-            }
-
-
-            //get nearest enemy (if there are any)
-            var enemies = this.scene.enemyWaves.activeEnemies;
-
-            if (enemies){
-                var nearestEnemy = {'index' : null, 'dist' : 1000};
-                for (var i = 0; i < enemies.length; i++){
-                    var dist = Math.hypot(enemies[i].x - this.x, enemies[i].y - this.y);
-                    if (nearestEnemy.index === null || nearestEnemy.dist > dist){
-                        nearestEnemy.index = i;
-                        nearestEnemy.dist = dist;
-                    }
-                }
-                //if nearest enemy is within detection radius, shoot
-                if (nearestEnemy.dist <= this.radius  && this.timer.getProgress() == 1 ){
-                    var projectile = new Projectile(this.scene, this.x, this.y, this, enemies[nearestEnemy.index]);
-                    this.scene.projectiles.add(projectile, true);
-                     this.timer.destroy();
-                    this.timer = this.scene.time.addEvent({delay: this.bullet_delay, repeat: 0});
-                }
-
+            //if nearest enemy is within detection radius, shoot
+            if (nearestEnemy.dist <= this.radius  && this.bulletTimer.getProgress() == 1 ){
+                var projectile = new Projectile(this.scene, this.x, this.y, this, enemies[nearestEnemy.index]);
+                this.scene.projectiles.add(projectile, true);
+                this.bulletTimer.destroy();
+                this.bulletTimer = this.scene.time.addEvent({delay: this.bullet_delay, repeat: 0});
             }
         }
-
     }
 
 };
@@ -780,40 +631,21 @@ class LevelScene extends Phaser.Scene {
         this.towerPlaceable = this.map.createDynamicLayer('towerPlace', tiles);
         this.backgroundLayer = this.map.createStaticLayer('background', tiles);
 
+        // ----- Towers -----
 
         // ---- Player loading ----
         // TODO: Test purposes only. If we implement save states, this should be refactored.
         // Calling Player(name, gold, lives, waveNum, towers, levelName) - taking defaults for most
         player = new Player(null, null, null, null, this.levelName);
-
-
-        // ----- Towers -----
         player.towers = this.add.group({
             runChildUpdate : true
         });
 
-
-        //bottom right 5 tiles used for tower placement
-        var basicTower = new Tower(this, this.tileSize / 2, this.mapHeight - this.tileSize/2, 'basicTower' );
-        player.towers.add(basicTower, true);
-
-        var piercingTower = new Tower(this, this.tileSize /2 + this.tileSize, this.mapHeight - this.tileSize/2, 'piercingTower');
-        player.towers.add(piercingTower, true);
-
-        var splashTower = new Tower(this, this.tileSize /2 + 2 * this.tileSize, this.mapHeight - this.tileSize/2, 'splashTower');
-        player.towers.add(splashTower, true);
-        var buyBasicTowerButton = new BuyTowerButton(this, menuAnchors.middle.x, menuAnchors.middle.y, 'basicTower');
-
-
-
-
         // ----- Projectiles -----
-         this.projectiles = this.add.group();
-
+        this.projectiles = this.add.group();
 
         // Add path for enemies on this level.
         this.path = new Phaser.Curves.Path();
-
 
         this.towerGrid = new Array(this.mapWidth/this.tileSize);
         for (var i = 0; i < this.towerGrid.length; i++){
@@ -896,6 +728,18 @@ class LevelScene extends Phaser.Scene {
 
         // TODO: Add tower purchase pane
         // TODO: Add selected tower info pane (with upgrade/sell buttons)
+        //bottom right 5 tiles used for tower placement
+        var towerTypes = ['basicTower', 'piercingTower', 'splashTower'];
+        var towerButtonsAnchor = {
+            x: menuAnchors.topLeft.x + this.tileSize * 4.5,
+            y: menuAnchors.topLeft.y + this.tileSize * 0.5
+        }
+        var nextTowerPosition = towerButtonsAnchor;
+        for(var i in towerTypes) {
+            var towerButton = new BuyTowerButton(this, nextTowerPosition.x, nextTowerPosition.y, towerTypes[i]);
+            player.towers.add(towerButton, true);
+            nextTowerPosition.x += this.tileSize;
+        }
 
 
 
@@ -1218,14 +1062,9 @@ class BuyTowerButton extends Button {
 
         this.type = config.name;
 
-        //marker used for tower
-        this.marker = this.scene.add.graphics();
-
-        //active represents whether or not the tower is searching for enemies
-        this.isOn = false;
-
         //radius to look for enemies
         this.radius = config.radius;
+        this.radiusGraphics = this.scene.add.graphics();
 
         //time to wait between shots
         this.bullet_delay = config.bullet_delay;
@@ -1233,13 +1072,44 @@ class BuyTowerButton extends Button {
         this.timer = this.scene.time.addEvent({delay: 1, repeat: 0});
         this.damage = config.damage;
 
-        this.towerText = new Text(scene,this.x - this.scene.tileSize/2 + 5, this.y - this.scene.tileSize - 55, "", {fontSize: '14pt', color:'#FFFFFF'});
+        this.towerText = new Text(scene,this.x - this.scene.tileSize/2 + 5, this.y + this.scene.tileSize/2, "", {fontSize: '14pt', color:'#FFFFFF'});
+
+        // Removes the listener that changes the graphic
+        this.removeListener('pointerdown');
+
+
         this.on('pointerdown', function(event) {
             if(player.gold >= this.cost) {
                 this.scene.input.once('pointerdown', function(event) {
                     this.buyTower(event);
                 }, this);
             }
+        });
+        this.on('pointerover', function(pointer){
+            var specText = "";
+            if (player.gold <= this.cost) {
+                specText += "NOT ENOUGH GOLD\n";
+            }
+            var fireRate = 1/(this.bullet_delay / 1000);
+            if (fireRate == 1) {
+                specText += "Cost: " + this.cost + "\nDamage: " + this.damage + "\nFire-rate: " + fireRate + " shots/sec\n";
+            } else {
+                specText += "Cost: " + this.cost + "\nDamage: " + this.damage + "\nFire-rate: " + fireRate + " shots/sec\n";
+            }
+            if (this.type == 'basicTower'){
+                specText += 'Basic tower: single target homing projectiles';
+            } else if (this.type == 'piercingTower'){
+                specText += 'Piercing tower: shoots a bullet that \ndamages all enemies it passes through';
+            } else {
+                specText += 'Splash tower: shoots a bullet that explodes upon \nreaching its target';
+            }
+            this.towerText.setText(specText);
+            this.radiusGraphics.lineStyle(1, 0xFFFFFF, 1);
+            this.radiusGraphics.strokeCircle(this.x, this.y, this.radius);
+        });
+        this.on('pointerout', function(pointer){
+            this.towerText.setText("");
+            this.radiusGraphics.clear();
         });
     }
 
@@ -1249,7 +1119,7 @@ class BuyTowerButton extends Button {
         var pointerTileX = this.scene.map.worldToTileX(event.worldX);
         var pointerTileY = this.scene.map.worldToTileY(event.worldY);
         var canPlace = false;
-        var scene = this.scene;
+        var scene = this.scene; // For the findTile function
 
         this.scene.towerPlaceable.findTile(function(tile){
             if (tile.x == pointerTileX && tile.y == pointerTileY && !scene.towerGrid[pointerTileX][pointerTileY]){
@@ -1260,12 +1130,96 @@ class BuyTowerButton extends Button {
 
             }
         });
+        // Place the tower, if we can
         if (canPlace){
-            var newTower = new Tower(this.scene, (pointerTileX + 0.5) * this.scene.tileSize, (pointerTileY + 0.5) * this.scene.tileSize, this.name);
             player.gold -= this.cost;
+            var newTower = new Tower(this.scene, (pointerTileX + 0.5) * this.scene.tileSize, (pointerTileY + 0.5) * this.scene.tileSize, this.name);
             player.towers.add(newTower, true);
+            this.scene.towerGrid[pointerTileX][pointerTileY] = true;
         }
     }
+
+//    oldCode() {
+//            this.setAlpha(1);
+//            this.marker.lineStyle(1, 0x7CFC00, 1);
+//            this.marker.strokeRect(0, 0, this.scene.tileSize, this.scene.tileSize);
+//            this.marker.setAlpha(0);
+//            this.setInteractive();
+//            this.scene.input.setDraggable(this);
+//            this.isDraggable = true;
+//            this.scene.input.on('dragstart', function (pointer, gameObject) {
+//                gameObject.setAlpha(0.5);
+//                gameObject.radiusGraphics.clear();
+//                gameObject.towerText.setText("");
+//            });
+//            this.scene.input.on('drag', function (pointer, gameObject, dragX, dragY) {
+//                gameObject.setPosition(dragX, dragY);
+//                var pointerTileX = this.scene.map.worldToTileX(pointer.x);
+//                var pointerTileY = this.scene.map.worldToTileY(pointer.y);
+//                var canPlace = false;
+//                 this.scene.towerPlaceable.findTile(function(tile){
+//                    if (tile.x == pointerTileX && tile.y == pointerTileY && !gameObject.scene.towerGrid[pointerTileX][pointerTileY]){
+//                        if (tile.index == 1){
+//                            canPlace = true;
+//                        }
+//                        return true;
+//                    }
+//                });
+//                if (canPlace){
+//                    gameObject.marker.setAlpha(1);
+//                    gameObject.marker.x = this.scene.map.tileToWorldX(pointerTileX);
+//                    gameObject.marker.y = this.scene.map.tileToWorldY(pointerTileY);
+//                }
+//                gameObject.radiusGraphics.clear();
+//                gameObject.radiusGraphics.lineStyle(1, "0xFFFFFF", 1);
+//                gameObject.radiusGraphics.strokeCircle(dragX, dragY, gameObject.radius);
+//            });
+//            this.scene.input.on('dragend', function(pointer, gameObject) {
+//                gameObject.radiusGraphics.clear();
+//                gameObject.setAlpha(1);
+//                // Snap to tile coordinates, but in world space
+//                var pointerTileX = this.scene.map.worldToTileX(pointer.x);
+//                var pointerTileY = this.scene.map.worldToTileY(pointer.y);
+//                var canPlace = false;
+//
+//                this.scene.towerPlaceable.findTile(function(tile){
+//                    if (tile.x == pointerTileX && tile.y == pointerTileY && !gameObject.scene.towerGrid[pointerTileX][pointerTileY]){
+//                        if (tile.index == 1){
+//                            canPlace = true;
+//                            return true;
+//                        }
+//
+//                    }
+//                });
+//                gameObject.marker.setAlpha(0);
+//                if (canPlace){
+//                    gameObject.purch++;
+//                    gameObject.setPosition(pointerTileX * gameObject.scene.tileSize + gameObject.scene.tileSize/2, pointerTileY * gameObject.scene.tileSize + gameObject.scene.tileSize/2);
+//                    gameObject.isOn = true;
+//                    gameObject.radiusGraphics.clear();
+//                    if (gameObject.purch == 1){
+//                        player.gold -= gameObject.cost;
+//                        var newTower = new Tower(gameObject.scene, gameObject.startPos.x, gameObject.startPos.y, gameObject.name);
+//                        player.towers.add(newTower,true);
+//                        gameObject.towerText.destroy();
+//                        gameObject.removeAllListeners();
+//                        gameObject.on('pointerover', function(pointer){
+//                            gameObject.radiusGraphics.lineStyle(1, 0xFFFFFF, 1);
+//                            gameObject.radiusGraphics.strokeCircle(gameObject.x, gameObject.y, gameObject.radius);
+//                        });
+//                        gameObject.on('pointerout', function(pointer){
+//                            gameObject.radiusGraphics.clear();
+//                        });
+//                    }
+//                    gameObject.pointer = {'x': pointerTileX, 'y': pointerTileY};
+//
+//                } else {
+//                    gameObject.setPosition(gameObject.startPos.x, gameObject.startPos.y);
+//
+//                }
+//            });
+//        
+//    }
 
 }
 
