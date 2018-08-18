@@ -1032,7 +1032,7 @@ class Player {
     constructor(name, gold, lives, waveNum, towers, levelName) {
         // Lets us pass in a player name later if we wanted to create a leaderboard for instance
         this.name = name || "Player 1";
-        this.gold = gold || 250;
+        this.gold = gold || 150;
         this.lives = lives || 10;
 
         // Wave number - can be used for save states?
