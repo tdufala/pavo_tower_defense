@@ -1160,6 +1160,8 @@ class BuyTowerButton extends Button {
         this.mouseOverMarker.setPosition(-Infinity, -Infinity);
         this.mouseOverMarker.setAlpha(0);
         this.selected = false;
+        this.toUnselect = false;
+        this.toSelect = false;
 
         // Removes the listener that changes the graphic
         this.removeAllListeners('pointerdown');
@@ -1170,9 +1172,9 @@ class BuyTowerButton extends Button {
         this.scene.input.on('pointerdown', (event) => this.buyTower(event), this);
         this.on('pointerdown', function(pointer) {
             if(player.gold < this.cost) {
-                this.selected = false;
+                this.toUnselect = true;
             } else {
-                this.selected = !this.selected;
+                this.toSelect = true;
             }
         }, this);
         this.on('pointerover', function(pointer){
@@ -1231,6 +1233,10 @@ class BuyTowerButton extends Button {
         }
     }
     syncSelected() {
+        if(this.toSelect) {
+            this.selected = true;
+            this.toSelect = false;
+        }
         if(this.toUnselect) {
             this.selected = false;
             this.toUnselect = false;
