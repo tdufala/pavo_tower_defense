@@ -474,12 +474,15 @@ var StartMenuScene = class extends Phaser.Scene {
         this.level1Text = new Text(this, 75, 200, 'Level 1', { fontSize: '49pt', color:'#00FF00' });
         this.level2Text = new Text(this, 75, 300, 'Level 2', { fontSize: '49pt', color:'#00FF00' });
         this.level3Text = new Text(this, 75, 400, 'Level 3', { fontSize: '49pt', color:'#00FF00' });
+        this.muteText = new Text(this, 75, 500, 'Mute/Unmute', { fontSize: '49pt', color:'#00FF00' });
         // Start Button
         this.lvl1Start = new Button(this, this.sys.canvas.width - 125, 225);
 
         this.lvl2Start = new Button(this, this.sys.canvas.width - 125, 325);
 
         this.lvl3Start = new Button(this, this.sys.canvas.width - 125, 425);
+
+        this.muteSwitch = new Button(this, this.sys.canvas.width - 125, 525);
         // Use 'pointerover' for mouseover event. Use 'pointerout' for mouse-leave event. - can use setTexture to change texture, for instance.
         this.lvl1Start.setFunc(function(context) {
             context.scene.start('level1');
@@ -496,10 +499,22 @@ var StartMenuScene = class extends Phaser.Scene {
             themeSong.stop();
         }); // Start the main game.
 
+        this.muteSwitch.setFunc(function() {
+        	if (themeSong.isPaused){
+        		themeSong.resume();
+        	}
+        	else if(themeSong.isPlaying){
+        		themeSong.pause();
+        	}
+        	    
+        }); 
+
         var themeSong = this.sound.add('theme');
         themeSong.play();
-
+        	
     }
+
+    
 
     update(){
         if (levelUnlocked == 1){
