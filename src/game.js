@@ -148,7 +148,9 @@ class Tower extends Phaser.GameObjects.Sprite {
         this.damage = config.damage;
         this.projectile = config.projectile; // Projectile name - references JSON file
 
-
+        if(this.upgradeName) {
+            this.towerText = new Text(scene,this.x - this.scene.tileSize/2 + 5, this.y + this.scene.tileSize/2, "", {fontSize: '14pt', color:'#FFFFFF'});
+        }
 
         //time to wait between shots
         this.bullet_delay = config.bullet_delay;
@@ -160,6 +162,27 @@ class Tower extends Phaser.GameObjects.Sprite {
         this.on('pointerover', function(pointer){
             this.radiusGraphics.lineStyle(1, 0xFFFFFF, 1);
             this.radiusGraphics.strokeCircle(this.x, this.y, this.radius);
+            // Add upgrade info
+            if(this.upgradeName) {
+                var specText = "";
+                if (player.gold <= this.cost) {
+                    specText += "NOT ENOUGH GOLD\n";
+                }
+                var fireRate = 1/(this.bullet_delay / 1000);
+                if (fireRate == 1) {
+                    specText += "Cost: " + this.upgradeCost + "\nDamage: " + this.damage + "\nFire-rate: " + fireRate + " shots/sec\n";
+                } else {
+                    specText += "Cost: " + this.upgradeCost + "\nDamage: " + this.damage + "\nFire-rate: " + fireRate + " shots/sec\n";
+                }
+                if (this.type == 'basicTower'){
+                    specText += 'Basic tower: single target homing projectiles';
+                } else if (this.type == 'piercingTower'){
+                    specText += 'Piercing tower: shoots a bullet that \ndamages all enemies it passes through';
+                } else {
+                    specText += 'Splash tower: shoots a bullet that explodes upon \nreaching its target';
+                }
+                this.towerText.setText(specText);
+            }
         });
         this.on('pointerout', function(pointer){
             this.radiusGraphics.clear();
@@ -1133,22 +1156,35 @@ class BuyTowerButton extends Button {
         this.damage = config.damage;
 
         this.towerText = new Text(scene,this.x - this.scene.tileSize/2 + 5, this.y + this.scene.tileSize/2, "", {fontSize: '14pt', color:'#FFFFFF'});
+        this.selected = false;
+        this.selectedMarker = this.scene.add.graphics();
+        this.selectedMarker.lineStyle(1, 0x7CFC00, 1);
+        this.selectedMarker.strokeRect(this.x - this.width/2, this.y - this.height/2, this.width, this.height);
+        this.selectedMarker.setAlpha(0);
+        this.mouseOverMarker = this.scene.add.graphics();
+        this.mouseOverMarker.lineStyle(1, 0x7CFC00, 1);
+        this.mouseOverMarker.strokeRect(0, 0, this.width, this.height);
+        this.mouseOverMarker.setAlpha(0);
 
         // Removes the listener that changes the graphic
         this.removeAllListeners('pointerdown');
+        this.removeAllListeners('pointerout');
+        this.removeAllListeners('pointerover');
 
-
-        this.on('pointerdown', function(event) {
-            if(player.gold >= this.cost) {
-                this.scene.input.once('pointerdown', function(event) {
-                    this.buyTower(event);
-                }, this);
-            } else {
+        this.on('pointerdown', function(pointer) {
+            if(this.selectedMarker.alpha == 1 || this.selected) {
+                this.unselect();
+            } else if(player.gold >= this.cost) {
+                this.selected = true;
+                this.selectedMarker.setAlpha(1);
+                this.scene.input.removeAllListeners('pointermove');
+                this.scene.input.on('pointermove', (event) => this.mouseoverIndicator(event));
+                this.scene.input.on('pointerdown', (event) => this.buyTower(event));
             }
         });
         this.on('pointerover', function(pointer){
             var specText = "";
-            if (player.gold <= this.cost) {
+            if (player.gold < this.cost) {
                 specText += "NOT ENOUGH GOLD\n";
             }
             var fireRate = 1/(this.bullet_delay / 1000);
@@ -1174,8 +1210,37 @@ class BuyTowerButton extends Button {
         });
     }
 
+    mouseoverIndicator(event) {
+        // Snap to tile coordinates, but in world space
+        var pointerTileX = this.scene.map.worldToTileX(event.worldX);
+        var pointerTileY = this.scene.map.worldToTileY(event.worldY);
+        var canPlace = false;
+        var scene = this.scene; // For the findTile function
+
+        this.scene.towerPlaceable.findTile(function(tile){
+            if (tile.x == pointerTileX && tile.y == pointerTileY && !scene.towerGrid[pointerTileX][pointerTileY]){
+                if (tile.index == 1){
+                    canPlace = true;
+                    return true;
+                }
+
+            }
+        });
+        if(canPlace) {
+            this.mouseOverMarker.x = pointerTileX * this.scene.tileSize;
+            this.mouseOverMarker.y = pointerTileY * this.scene.tileSize;
+            this.mouseOverMarker.setAlpha(1);
+        } else {
+            this.mouseOverMarker.setAlpha(0);
+        }
+    }
+
     // Buys and places a tower if the location is placeable
     buyTower(event) {
+        if(player.gold < this.cost) {
+            this.unselect();
+            return;
+        }
         // Snap to tile coordinates, but in world space
         var pointerTileX = this.scene.map.worldToTileX(event.worldX);
         var pointerTileY = this.scene.map.worldToTileY(event.worldY);
@@ -1197,11 +1262,22 @@ class BuyTowerButton extends Button {
             var newTower = new Tower(this.scene, (pointerTileX + 0.5) * this.scene.tileSize, (pointerTileY + 0.5) * this.scene.tileSize, this.name);
             player.towers.add(newTower, true);
             this.scene.towerGrid[pointerTileX][pointerTileY] = true;
+            this.mouseOverMarker.setAlpha(0);
+        } else {
+            this.unselect();
         }
     }
 
+    unselect() {
+        this.selected = false;
+        this.selectedMarker.setAlpha(0);
+        this.mouseOverMarker.setAlpha(0);
+        this.scene.input.removeAllListeners('pointermove');
+        this.scene.input.removeAllListeners('pointerdown');
+    }
     update(time, delta) {
         if(player.gold < this.cost) {
+            this.unselect();
             this.alpha = 0.3;
         } else {
             this.alpha = 1;
