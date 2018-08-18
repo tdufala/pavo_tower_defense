@@ -1,44 +1,98 @@
-{
-"enemies": {
-    "bigNormalEnemy": {
-        "altType": "normalEnemy",
-        "enemyProps": {
-            "health": 1000
-        }
-    }
-},
-"waves": [
-    [
-        {
-            "enemyType": "normalEnemy",
-            "enemyCount": 10
-        }
-    ], [
-        {
-            "enemyType": "normalEnemy",
-            "enemyCount": 50,
-            "spawnSpread": 500
-        }, {
-            "enemyType": "scaryEnemy",
-            "enemyCount": 10
-        }
-    ], [
-        {
-            "enemyType": "normalEnemy",
-            "enemyCount": 75,
-            "spawnSpread": 300
-        }
-    ], [
-        {
-            "enemyType": "normalEnemy",
-            "enemyCount": 100,
-            "spawnSpread": 250
-        }
-    ], [
-        {
-            "enemyType": "normalEnemy",
-            "enemyCount": 1000,
-            "spawnSpread": 50
-        }
-    ]
-]}
+	{
+	"enemies": {
+		"bigNormalEnemy": {
+			"altType": "normalEnemy",
+			"enemyProps": {
+				"health": 1000
+			}
+		}
+	},
+	"waves": [
+		[
+			{
+				"enemyType": "normalEnemy",
+				"enemyCount": 10
+			}
+		], [
+			{
+				"enemyType": "normalEnemy",
+				"enemyCount": 25,
+				"spawnSpread": 500
+			}, {
+				"enemyType": "scaryEnemy",
+				"enemyCount": 10
+			}
+		], [
+			{
+				"enemyType": "scaryEnemy",
+				"enemyCount": 25
+			}
+		], [
+			{
+				"enemyType": "normalEnemy",
+				"enemyCount": 50,
+				"spawnSpread": 100
+			}
+		], [
+			{
+				"enemyType": "tankEnemy",
+				"enemyCount": 3,
+				"spawnSpread": 200
+			}
+		],
+		[
+			{
+			"enemyType": "normalEnemy",
+			"enemyCount": 5,
+			"spawnSpread": 50
+			},
+			{
+			"enemyType": "scaryEnemy",
+			"enemyCount": 10,
+			"spawnSpread":10 
+			}
+		], [
+			{
+			"enemyType": "tankEnemy",
+			"enemyCount":1
+			},
+			{
+			"enemyType": "scaryEnemy",
+			"enemyCount": 10,
+			"spawnSpread": 100
+			},
+			{
+			"enemyType": "normalEnemy",
+			"enemyCount": 10,
+			"spawnSpread": 100
+			}
+		],[
+			{
+				"enemyType": "scaryEnemy",
+				"enemyCount": 100,
+				"spawnSpread": 50
+			}
+		], [
+			{
+				"enemyType": "tankEnemy",
+				"enemyCount": 10,
+				"spawnSpread": 10
+			}
+		], [
+			{
+				"enemyType": "tankEnemy",
+				"enemyCount": 2,
+				"spawnSpread": 250
+			},
+			{
+				"enemyType": "normalEnemy",
+				"enemyCount": 16,
+				"spawnSpread": 100
+			}, {
+				"enemyType": "scaryEnemy",
+				"enemyCount": 64,
+				"spawnSpread": 50
+			}
+		]
+	]
+	}
