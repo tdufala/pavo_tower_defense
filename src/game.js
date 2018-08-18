@@ -683,6 +683,8 @@ class LevelScene extends Phaser.Scene {
         this.load.image('normalEnemy', 'assets/images/normalEnemy.png');
         this.load.json('scaryEnemy', 'src/enemies/scaryEnemy.json');
         this.load.image('scaryEnemy', 'assets/images/scaryEnemy.png');
+		this.load.json('tankEnemy', 'src/enemies/tankEnemy.json');
+		this.load.image('tankEnemy', 'assets/images/tankEnemy.png');
         this.load.json('basicTower', 'src/towers/basicTower.json');
         this.load.image('basicTower', 'assets/images/basicTower.png');
         this.load.json('basicProjectile', 'src/projectiles/basicProjectile.json');
