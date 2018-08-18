@@ -162,23 +162,26 @@ class Tower extends Phaser.GameObjects.Sprite {
     }
  
     update() {
-        // Get nearest enemy (if there are any)
-        var enemies = this.scene.enemyWaves.activeEnemies;
-        if (enemies){
-            var nearestEnemy = {'index' : null, 'dist' : Infinity};
-            for (var i = 0; i < enemies.length; i++){
-                var dist = Math.hypot(enemies[i].x - this.x, enemies[i].y - this.y);
-                if (nearestEnemy.index === null || nearestEnemy.dist > dist){
-                    nearestEnemy.index = i;
-                    nearestEnemy.dist = dist;
+        // First, check if we're ready to shoot.
+        if(this.bulletTimer.getProgress() == 1) {
+            // Get nearest enemy (if there are any)
+            var enemies = this.scene.enemyWaves.activeEnemies;
+            if (enemies){
+                var nearestEnemy = {'index' : null, 'dist' : Infinity};
+                for (var i = 0; i < enemies.length; i++){
+                    var dist = Math.hypot(enemies[i].x - this.x, enemies[i].y - this.y);
+                    if (nearestEnemy.index === null || nearestEnemy.dist > dist){
+                        nearestEnemy.index = i;
+                        nearestEnemy.dist = dist;
+                    }
                 }
-            }
-            //if nearest enemy is within detection radius, shoot
-            if (nearestEnemy.dist <= this.radius  && this.bulletTimer.getProgress() == 1 ){
-                var projectile = new Projectile(this.scene, this.x, this.y, this, enemies[nearestEnemy.index]);
-                this.scene.projectiles.add(projectile, true);
-                this.bulletTimer.destroy();
-                this.bulletTimer = this.scene.time.addEvent({delay: this.bullet_delay, repeat: 0});
+                //if nearest enemy is within detection radius, shoot
+                if (nearestEnemy.dist <= this.radius){
+                    var projectile = new Projectile(this.scene, this.x, this.y, this, enemies[nearestEnemy.index]);
+                    this.scene.projectiles.add(projectile, true);
+                    this.bulletTimer.destroy();
+                    this.bulletTimer = this.scene.time.addEvent({delay: this.bullet_delay, repeat: 0});
+                }
             }
         }
     }
