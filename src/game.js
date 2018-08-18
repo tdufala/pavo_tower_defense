@@ -137,7 +137,7 @@ class Tower extends Phaser.GameObjects.Sprite {
         // We want interactivity for mouseovers
         this.setInteractive();
         // Read data from config file.
-        var config = this.scene.cache.json.get(this.name);
+        var config = Object.assign({}, this.scene.cache.json.get(this.name));
         // Default cost of 0
         this.cost = config.cost || 0;
         this.upgradeCost = config.upgradeCost || 0;
@@ -266,7 +266,7 @@ class Projectile extends Phaser.GameObjects.Sprite {
     constructor(scene, x, y, tower, target) {
         super(scene, x, y, tower.projectile);
         this.name = tower.projectile;
-        var config = scene.cache.json.get(this.name);
+        var config = Object.assign({}, scene.cache.json.get(this.name));
         this.speed = config.speed || 1;
         this.scene = scene || console.log("Error, no scene defined");
         this.damage = tower.damage;
@@ -565,13 +565,7 @@ var StartMenuScene = class extends Phaser.Scene {
         }); // Start the main game.
 
         this.muteSwitch.setFunc(function() {
-        	if (themeSong.isPaused){
-        		themeSong.resume();
-        	}
-        	else if(themeSong.isPlaying){
-        		themeSong.pause();
-        	}
-        	    
+            game.sound.mute = !game.sound.mute;
         }); 
 
         var themeSong = this.sound.add('theme', { loop: true });
@@ -901,7 +895,7 @@ class EnemyWaves {
         this.activeEnemies = null;
         this.allWavesStarted = false;
         // The scene provides a JSON waveFile we use to generate waves
-        var waveFileJSON = this.scene.cache.json.get('waveFile' + this.scene.levelName);
+        var waveFileJSON = Object.assign({}, this.scene.cache.json.get('waveFile' + this.scene.levelName));
         this.generateWaves(waveFileJSON);
     }
 
@@ -1133,7 +1127,7 @@ class BuyTowerButton extends Button {
         super(scene, x, y, texture, frame);
         this.name = texture;
         // Read data from config file.
-        var config = this.scene.cache.json.get(this.name);
+        var config = Object.assign({}, this.scene.cache.json.get(this.name));
         // Default cost of 0
         this.cost = config.cost || 0;
 
@@ -1156,7 +1150,6 @@ class BuyTowerButton extends Button {
         this.damage = config.damage;
 
         this.towerText = new Text(scene,this.x - this.scene.tileSize/2 + 5, this.y + this.scene.tileSize/2, "", {fontSize: '14pt', color:'#FFFFFF'});
-        this.selected = false;
         this.selectedMarker = this.scene.add.graphics();
         this.selectedMarker.lineStyle(1, 0x7CFC00, 1);
         this.selectedMarker.strokeRect(this.x - this.width/2, this.y - this.height/2, this.width, this.height);
@@ -1164,24 +1157,24 @@ class BuyTowerButton extends Button {
         this.mouseOverMarker = this.scene.add.graphics();
         this.mouseOverMarker.lineStyle(1, 0x7CFC00, 1);
         this.mouseOverMarker.strokeRect(0, 0, this.width, this.height);
+        this.mouseOverMarker.setPosition(-Infinity, -Infinity);
         this.mouseOverMarker.setAlpha(0);
+        this.selected = false;
 
         // Removes the listener that changes the graphic
         this.removeAllListeners('pointerdown');
         this.removeAllListeners('pointerout');
         this.removeAllListeners('pointerover');
 
+        this.scene.input.on('pointermove', (event) => this.mouseoverIndicator(event), this);
+        this.scene.input.on('pointerdown', (event) => this.buyTower(event), this);
         this.on('pointerdown', function(pointer) {
-            if(this.selectedMarker.alpha == 1 || this.selected) {
-                this.unselect();
-            } else if(player.gold >= this.cost) {
-                this.selected = true;
-                this.selectedMarker.setAlpha(1);
-                this.scene.input.removeAllListeners('pointermove');
-                this.scene.input.on('pointermove', (event) => this.mouseoverIndicator(event));
-                this.scene.input.on('pointerdown', (event) => this.buyTower(event));
+            if(player.gold < this.cost) {
+                this.selected = false;
+            } else {
+                this.selected = !this.selected;
             }
-        });
+        }, this);
         this.on('pointerover', function(pointer){
             var specText = "";
             if (player.gold < this.cost) {
@@ -1211,6 +1204,10 @@ class BuyTowerButton extends Button {
     }
 
     mouseoverIndicator(event) {
+        if(!this.selected) {
+            this.mouseOverMarker.setAlpha(0);
+            return;
+        }
         // Snap to tile coordinates, but in world space
         var pointerTileX = this.scene.map.worldToTileX(event.worldX);
         var pointerTileY = this.scene.map.worldToTileY(event.worldY);
@@ -1227,18 +1224,33 @@ class BuyTowerButton extends Button {
             }
         });
         if(canPlace) {
-            this.mouseOverMarker.x = pointerTileX * this.scene.tileSize;
-            this.mouseOverMarker.y = pointerTileY * this.scene.tileSize;
+            this.mouseOverMarker.setPosition(pointerTileX * this.scene.tileSize, pointerTileY * this.scene.tileSize);
+        } else {
+            this.mouseOverMarker.setPosition(-Infinity, -Infinity);
+            this.mouseOverMarker.setAlpha(0);
+        }
+    }
+    syncSelected() {
+        if(this.toUnselect) {
+            this.selected = false;
+            this.toUnselect = false;
+        }
+        if(this.selected) {
             this.mouseOverMarker.setAlpha(1);
+            this.selectedMarker.setAlpha(1);
         } else {
             this.mouseOverMarker.setAlpha(0);
+            this.selectedMarker.setAlpha(0);
         }
     }
 
     // Buys and places a tower if the location is placeable
     buyTower(event) {
+        if(!this.selected) {
+            return;
+        }
         if(player.gold < this.cost) {
-            this.unselect();
+            this.toUnselect = true;
             return;
         }
         // Snap to tile coordinates, but in world space
@@ -1263,25 +1275,20 @@ class BuyTowerButton extends Button {
             player.towers.add(newTower, true);
             this.scene.towerGrid[pointerTileX][pointerTileY] = true;
             this.mouseOverMarker.setAlpha(0);
+            this.mouseOverMarker.setPosition(-Infinity, -Infinity);
         } else {
-            this.unselect();
+            this.toUnselect = true;
         }
     }
 
-    unselect() {
-        this.selected = false;
-        this.selectedMarker.setAlpha(0);
-        this.mouseOverMarker.setAlpha(0);
-        this.scene.input.removeAllListeners('pointermove');
-        this.scene.input.removeAllListeners('pointerdown');
-    }
     update(time, delta) {
         if(player.gold < this.cost) {
-            this.unselect();
+            this.selected = false;
             this.alpha = 0.3;
         } else {
             this.alpha = 1;
         }
+        this.syncSelected();
     }
 
 //    oldCode() {
