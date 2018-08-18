@@ -148,7 +148,9 @@ class Tower extends Phaser.GameObjects.Sprite {
         this.damage = config.damage;
         this.projectile = config.projectile; // Projectile name - references JSON file
 
-
+        if(this.upgradeName) {
+            this.towerText = new Text(scene,this.x - this.scene.tileSize/2 + 5, this.y + this.scene.tileSize/2, "", {fontSize: '14pt', color:'#FFFFFF'});
+        }
 
         //time to wait between shots
         this.bullet_delay = config.bullet_delay;
@@ -160,6 +162,27 @@ class Tower extends Phaser.GameObjects.Sprite {
         this.on('pointerover', function(pointer){
             this.radiusGraphics.lineStyle(1, 0xFFFFFF, 1);
             this.radiusGraphics.strokeCircle(this.x, this.y, this.radius);
+            // Add upgrade info
+            if(this.upgradeName) {
+                var specText = "";
+                if (player.gold <= this.cost) {
+                    specText += "NOT ENOUGH GOLD\n";
+                }
+                var fireRate = 1/(this.bullet_delay / 1000);
+                if (fireRate == 1) {
+                    specText += "Cost: " + this.upgradeCost + "\nDamage: " + this.damage + "\nFire-rate: " + fireRate + " shots/sec\n";
+                } else {
+                    specText += "Cost: " + this.upgradeCost + "\nDamage: " + this.damage + "\nFire-rate: " + fireRate + " shots/sec\n";
+                }
+                if (this.type == 'basicTower'){
+                    specText += 'Basic tower: single target homing projectiles';
+                } else if (this.type == 'piercingTower'){
+                    specText += 'Piercing tower: shoots a bullet that \ndamages all enemies it passes through';
+                } else {
+                    specText += 'Splash tower: shoots a bullet that explodes upon \nreaching its target';
+                }
+                this.towerText.setText(specText);
+            }
         });
         this.on('pointerout', function(pointer){
             this.radiusGraphics.clear();
