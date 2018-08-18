@@ -1121,7 +1121,7 @@ class BuyTowerButton extends Button {
         this.towerText = new Text(scene,this.x - this.scene.tileSize/2 + 5, this.y + this.scene.tileSize/2, "", {fontSize: '14pt', color:'#FFFFFF'});
 
         // Removes the listener that changes the graphic
-        this.removeListener('pointerdown');
+        this.removeAllListeners('pointerdown');
 
 
         this.on('pointerdown', function(event) {
@@ -1129,6 +1129,7 @@ class BuyTowerButton extends Button {
                 this.scene.input.once('pointerdown', function(event) {
                     this.buyTower(event);
                 }, this);
+            } else {
             }
         });
         this.on('pointerover', function(pointer){
@@ -1182,6 +1183,14 @@ class BuyTowerButton extends Button {
             var newTower = new Tower(this.scene, (pointerTileX + 0.5) * this.scene.tileSize, (pointerTileY + 0.5) * this.scene.tileSize, this.name);
             player.towers.add(newTower, true);
             this.scene.towerGrid[pointerTileX][pointerTileY] = true;
+        }
+    }
+
+    update(time, delta) {
+        if(player.gold < this.cost) {
+            this.alpha = 0.3;
+        } else {
+            this.alpha = 1;
         }
     }
 
