@@ -23,7 +23,6 @@ var config = {
     pixelArt: true, // antialias: false, roundPixels: true
     useTicker: true,
     scene: scenes,
-    preload: gamePreload
 };
 
 // just a little shortcut...
@@ -118,10 +117,15 @@ function windowOnLoad() {
     // Run the game
     player = new Player();
     game = new Phaser.Game(config);
-}
-
-function gamePreload() {
-    game.stage.disableVisibilityChange = true;
+    // Tweak sound settings to always play sound when visible, and no sound otherwise
+    // The game pauses usually if not visible.
+    game.sound.pauseOnBlur = false;
+    game.events.on('hidden', function(event) {
+        game.sound.mute = true;
+    });
+    game.events.on('visible', function(event) {
+        game.sound.mute = false;
+    });
 }
 
 // ======== Towers ========
@@ -136,7 +140,10 @@ class Tower extends Phaser.GameObjects.Sprite {
         var config = this.scene.cache.json.get(this.name);
         // Default cost of 0
         this.cost = config.cost || 0;
+        this.upgradeCost = config.upgradeCost || 0;
+        this.upgradeName = config.upgradeName;
         this.type = config.name;
+        // Name of the tower to upgrade to
         this.radius = config.radius; // Tower range for seeking enemies
         this.damage = config.damage;
         this.projectile = config.projectile; // Projectile name - references JSON file
@@ -157,11 +164,22 @@ class Tower extends Phaser.GameObjects.Sprite {
         this.on('pointerout', function(pointer){
             this.radiusGraphics.clear();
         });
+        this.on('pointerdown', function(pointer) {
+            if(player.gold >= this.upgradeCost) {
+                this.upgrade();
+            }
+        });
+
 
 
     }
- 
+
     update() {
+        // Flag we can set asynchronously to ensure things happen properly.
+        if(this.pendingDestruction) {
+            this.destroy();
+            return;
+        }
         // First, check if we're ready to shoot.
         if(this.bulletTimer.getProgress() == 1) {
             // Get nearest enemy (if there are any)
@@ -183,6 +201,36 @@ class Tower extends Phaser.GameObjects.Sprite {
                     this.bulletTimer = this.scene.time.addEvent({delay: this.bullet_delay, repeat: 0});
                 }
             }
+        }
+    }
+    upgrade() {
+        console.log("Attempting to upgrade!");
+        if(!this.upgradeName)
+            return;
+        if(player.gold >= this.upgradeCost) {
+            player.gold -= this.upgradeCost;
+            var upgradedTower = new Tower(this.scene, this.x, this.y, this.upgradeName);
+            player.towers.add(upgradedTower);
+            this.pendingDestruction = true; // Do this since this happens asynchronously.
+            return;
+        } else {
+            var needMoreGoldText = new Text(this.scene, this.x, this.y, 'Need\nmore\ngold!', { fontSize: '14pt', color:'#FF0000', align: 'center'});
+            needMoreGoldText.x -= needMoreGoldText.displayWidth / 2;
+            needMoreGoldText.y -= needMoreGoldText.displayHeight / 2;
+            needMoreGoldText.alpha = 0;
+            this.scene.tweens.add({
+                targets: needMoreGoldText,
+                ease: 'Sine.easeInOut',
+                duration: 2000,
+                delay: 0,
+                alpha: {
+                    getStart: () => 1,
+                    getEnd: () => 0
+                },
+                onComplete: () => {
+                    needMoreGoldText.destroy();
+                }
+            });
         }
     }
 
@@ -224,16 +272,10 @@ class Projectile extends Phaser.GameObjects.Sprite {
             this.splashFactor = config.splashFactor || 0.6;
             this.updateFn = this.updateSplash;
         }
-
+        var laser1 = this.scene.sound.add('laser1');
+        laser1.volume = 0.5;
+        laser1.play();
     }
-
-    //preload(){
-    //    this.load.audio('laser1', 'assets/audio/laser1.mp3');
-    //}
-
-    //create(){
-    //    var laser1 = this.sound.add('laser1');
-    //}
 
     updatePiercing(time, delta) {
         var angle = this.targetAngle;
@@ -509,14 +551,12 @@ var StartMenuScene = class extends Phaser.Scene {
         	    
         }); 
 
-        var themeSong = this.sound.add('theme');
+        var themeSong = this.sound.add('theme', { loop: true });
         themeSong.play();
         	
     }
 
-    
-
-    update(){
+    update(time, delta) {
         if (levelUnlocked == 1){
             this.lvl2Start.setActive(false);
             this.lvl2Start.setVisible(false);
@@ -584,7 +624,7 @@ var victoryScene = class extends Phaser.Scene {
         this.timer = this.time.addEvent({delay: this.redirectTime, repeat: 0});
         this.redirText = new Text(this, youWinText.x, youWinText.y + 300, "Redirecting in " + Math.round((1-this.timer.getProgress()) * this.redirectTime), normalFont);
     }
-    update(){
+    update(time, delta){
         this.redirText.setText("Redirecting in " + Math.round((1-this.timer.getProgress()) * this.redirectTime / 1000));
         if (this.timer.getProgress() == 1){
             this.scene.start('startMenu');
@@ -639,6 +679,7 @@ class LevelScene extends Phaser.Scene {
         this.load.json('splashProjectile', 'src/projectiles/splashProjectile.json');
         this.load.image('splashProjectile', 'assets/images/splashProjectile.png');
 
+        this.load.audio('laser1', 'assets/audio/laser1.mp3');
 
     }
 
@@ -1094,7 +1135,7 @@ class BuyTowerButton extends Button {
         this.towerText = new Text(scene,this.x - this.scene.tileSize/2 + 5, this.y + this.scene.tileSize/2, "", {fontSize: '14pt', color:'#FFFFFF'});
 
         // Removes the listener that changes the graphic
-        this.removeListener('pointerdown');
+        this.removeAllListeners('pointerdown');
 
 
         this.on('pointerdown', function(event) {
@@ -1102,6 +1143,7 @@ class BuyTowerButton extends Button {
                 this.scene.input.once('pointerdown', function(event) {
                     this.buyTower(event);
                 }, this);
+            } else {
             }
         });
         this.on('pointerover', function(pointer){
@@ -1155,6 +1197,14 @@ class BuyTowerButton extends Button {
             var newTower = new Tower(this.scene, (pointerTileX + 0.5) * this.scene.tileSize, (pointerTileY + 0.5) * this.scene.tileSize, this.name);
             player.towers.add(newTower, true);
             this.scene.towerGrid[pointerTileX][pointerTileY] = true;
+        }
+    }
+
+    update(time, delta) {
+        if(player.gold < this.cost) {
+            this.alpha = 0.3;
+        } else {
+            this.alpha = 1;
         }
     }
 
@@ -1237,7 +1287,7 @@ class BuyTowerButton extends Button {
 //
 //                }
 //            });
-//        
+//
 //    }
 
 }
