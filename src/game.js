@@ -526,8 +526,6 @@ var StartMenuScene = class extends Phaser.Scene {
     preload() {
         this.load.image('defaultButton', 'assets/images/blue_button09.png');
         this.load.image('defaultButtondown', 'assets/images/blue_button08.png')
-        this.load.image('blueCircle', 'assets/images/blue_circle.png');
-        this.load.image('greenCircle', 'assets/images/green_circle.png');
         this.load.audio('theme', 'assets/audio/battle.mp3');
         // Hack to load the Visitor font
         this.add.text(-Infinity, -Infinity, "Loading Visitor Font...", {font:"1px Visitor", fill: "#FFFFFF"}).destroy();
@@ -673,7 +671,7 @@ class LevelScene extends Phaser.Scene {
     preload() {
         // Load common assets
         this.load.image('defaultButton', 'assets/images/blue_button09.png');
-        this.load.image('defaultButtondown', 'assets/images/blue_button09.png');
+        this.load.image('defaultButtondown', 'assets/images/blue_button08.png');
         this.load.image('longButton', 'assets/images/green_button00.png');
         this.load.image('longButtondown', 'assets/images/green_button02.png');
         this.load.image('gameTiles', 'assets/spritesheets/minimalTilesTowers.png', { frameWidth: 64, frameHeight: 64});
